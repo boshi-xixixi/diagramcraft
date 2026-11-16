@@ -266,6 +266,15 @@
     .canvas-hint{display:none}
   }
 
+  /* 无界面模式：供命令行截图 / 嵌入使用 */
+  body.bare{background:#fff;overflow:hidden}
+  body.bare .topbar,body.bare .mobile-tabs,body.bare .pane,body.bare .canvas-toolbar,
+  body.bare .zoom,body.bare .canvas-hint,body.bare .toast{display:none!important}
+  body.bare .workspace{display:block;padding:0;height:auto;min-height:0}
+  body.bare .canvas-pane{height:auto;min-height:0;border:0;border-radius:0;box-shadow:none;background:#fff}
+  body.bare .viewport{position:static;overflow:visible;background:#fff}
+  body.bare #stage{position:static;margin:0;box-shadow:none;transform:none!important;background:#fff;max-width:100%;height:auto}
+
   /* ---------- 手机端 ---------- */
   .mobile-tabs{display:none}
   .viewport{touch-action:none}
@@ -947,8 +956,12 @@
     state.tree = { W, H };
     bindNodeDrag();
     updateStats();
-    applyView();
-    if (fit) fitView();
+    if (isBare()){
+      stage.style.transform = 'none';
+    }else{
+      applyView();
+      if (fit) fitView();
+    }
     return true;
   }
 
@@ -2489,6 +2502,11 @@
     return window.matchMedia('(max-width: 760px)').matches;
   }
 
+  // 无界面模式：?bare=1，供命令行 / 截图 / 嵌入使用
+  function isBare(){
+    return /(?:^|[?&])bare=1(?:&|$)/.test(location.search);
+  }
+
   function setMobileView(v){
     document.body.dataset.view = v;
     document.querySelectorAll('#mobileTabs .mt-btn').forEach(b => {
@@ -3428,6 +3446,7 @@
     switchType(state.type, true);
     syncStyleInputs();
     const deepLinked = applyDeepLink();
+    if (isBare()) document.body.classList.add('bare');
     setMobileView(deepLinked ? 'preview' : 'edit');
     requestAnimationFrame(() => {
       const ok = render(true);

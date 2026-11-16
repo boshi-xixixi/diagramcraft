@@ -190,6 +190,27 @@
   .feat h4{margin:0 0 4px;font-size:14px}
   .feat p{margin:0;font-size:12.5px;color:var(--sub)}
 
+  /* Skill */
+  .skill-wrap{display:grid;grid-template-columns:1.05fr .95fr;gap:18px;align-items:stretch}
+  .skill-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:24px}
+  .skill-tags{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+  .skill-tags span{font-size:11.5px;color:#4b6a9b;background:#f1f5fd;border:1px solid #e2eaf9;border-radius:999px;padding:2px 9px}
+  .skill-card h3{margin:0 0 10px;font-size:17px}
+  .skill-steps{margin:0 0 18px;padding-left:18px;color:var(--sub);font-size:13.5px;line-height:1.9}
+  .skill-steps code{font-size:12px;background:#f4f6fa;border-radius:5px;padding:1px 5px;word-break:break-all}
+  .skill-actions{display:flex;gap:10px;flex-wrap:wrap}
+  .term{background:#0f172a;border-radius:16px;overflow:hidden;display:flex;flex-direction:column}
+  .term-bar{display:flex;align-items:center;gap:6px;padding:11px 14px;border-bottom:1px solid #1e293b}
+  .term-bar i{width:9px;height:9px;border-radius:50%;background:#334155;display:block}
+  .term-bar i:first-child{background:#f87171}
+  .term-bar i:nth-child(2){background:#fbbf24}
+  .term-bar i:nth-child(3){background:#34d399}
+  .term-bar span{margin-left:8px;color:#64748b;font-size:11.5px}
+  .term pre{margin:0;padding:16px 18px;color:#c7d2fe;font-size:12px;line-height:1.9;overflow:auto;
+    font-family:"SFMono-Regular",Menlo,Consolas,monospace;white-space:pre-wrap}
+  .term .c{color:#64748b}
+  .term .ok{color:#7ee2a8}
+
   /* FAQ */
   details{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin-bottom:10px}
   details[open]{border-color:#cfdcf5}
@@ -223,6 +244,7 @@
     .feats{grid-template-columns:repeat(2,1fr)}
     .steps{grid-template-columns:1fr}
     .paper{grid-template-columns:1fr}
+    .skill-wrap{grid-template-columns:1fr}
   }
   @media (max-width: 720px){
     .nav-links{display:none}
@@ -232,8 +254,6 @@
     section{padding:44px 0}
     .types{grid-template-columns:1fr}
     .feats{grid-template-columns:1fr}
-    .chip.a{right:0;top:auto;bottom:auto;left:0;position:static;margin-top:10px;display:inline-flex}
-    .chip.b,.chip.c{display:none}
     .chip{display:none}
     .mock-body{padding:12px}
     .cta{padding:30px 22px;gap:16px}
@@ -264,6 +284,7 @@
       <a href="#types">支持的图种</a>
       <a href="#flow">使用流程</a>
       <a href="#paper">写进论文</a>
+      <a href="#skill">开源 Skill</a>
       <a href="#faq">常见问题</a>
     </nav>
     <div class="nav-cta">
@@ -524,6 +545,46 @@
     </div>
   </section>
 
+  <!-- 开源 Skill -->
+  <section id="skill">
+    <div class="wrap">
+      <div class="sec-head">
+        <div class="eyebrow">Open source skill</div>
+        <h2>开源 Skill：在你的 Agent 里直接出图</h2>
+        <p>「图构」不只是一个网页，也是一份标准结构的 Agent Skill。给它一句需求，它产出规范文本，再执行一条命令就得到 PNG / SVG。</p>
+      </div>
+      <div class="skill-wrap">
+        <div class="skill-card">
+          <div class="skill-tags"><span>MIT</span><span>零 npm 依赖</span><span>Node ≥ 18</span><span>Chrome headless</span></div>
+          <h3>接入只要三步</h3>
+          <ol class="skill-steps">
+            <li><b>克隆仓库</b>：<code>git clone https://github.com/boshi-xixixi/diagramcraft.git</code></li>
+            <li><b>放进 skills 目录</b>，或直接把 <code>SKILL.md</code> 当提示词用</li>
+            <li><b>出图</b>：<code>node scripts/render.mjs -t flow -f flow.txt -o flow.png</code></li>
+          </ol>
+          <div class="skill-actions">
+            <a class="btn primary" href="https://github.com/boshi-xixixi/diagramcraft" target="_blank" rel="noopener">GitHub 仓库</a>
+            <a class="btn" href="https://github.com/boshi-xixixi/diagramcraft/blob/main/SKILL.md" target="_blank" rel="noopener">阅读 SKILL.md</a>
+          </div>
+        </div>
+        <div class="term">
+          <div class="term-bar"><i></i><i></i><i></i><span>terminal</span></div>
+          <pre><span class="c">$</span> git clone https://github.com/boshi-xixixi/diagramcraft.git
+<span class="c">$</span> cd diagramcraft
+<span class="c">$</span> node scripts/render.mjs \
+    --type module --file examples/module.txt \
+    --out module.png
+
+<span class="ok">{</span>
+  <span class="ok">"ok": true,</span>
+  <span class="ok">"width": 1286, "height": 687,</span>
+  <span class="ok">"format": "png", "bytes": 89967</span>
+<span class="ok">}</span></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- FAQ -->
   <section id="faq">
     <div class="wrap">
@@ -573,6 +634,7 @@
     <span>图构 DiagramCraft · v1.2</span>
     <span>面向毕业设计的文本驱动图表生成系统</span>
     <div class="right">
+      <a href="https://github.com/boshi-xixixi/diagramcraft" target="_blank" rel="noopener">GitHub</a>
       <a href="./editor.html">编辑器</a>
       <a href="#types">图种</a>
       <a href="#faq">常见问题</a>
