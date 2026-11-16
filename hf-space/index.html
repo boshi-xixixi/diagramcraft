@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>图构 DiagramCraft · 面向毕业设计的文本驱动图表生成系统</title>
+<meta name="description" content="图构（DiagramCraft）：把中文项目描述转成功能模块图、流程图、用例图、系统架构图、时序图、UML 类图、ER 图、全局 ER 图与数据库三线表。复制即贴进 Word，导出 PNG / SVG / A4 Word。单文件、离线、免登录。" />
+<meta property="og:title" content="图构 DiagramCraft · 毕业设计图表生成系统" />
+<meta property="og:description" content="文本一键生成 9 种毕业设计常用图，支持复制图片到 Word、导出 A4 Word 文档与矢量图。" />
+<meta property="og:type" content="website" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232f6bff'/%3E%3Cpath d='M8 10h7v4H8zM17 18h7v4h-7zM11.5 14v6h2v-2h3.5v-2h-3.5v-2z' fill='%23ffffff'/%3E%3C/svg%3E" />
+<script>
+  // 保留旧的深链：/?type=flow&text=... 自动转到编辑器
+  (function () {
+    var q = location.search + location.hash;
+    if (/[?&#](type|text)=/.test(q)) {
+      location.replace('editor.html' + location.search + location.hash);
+    }
+  })();
+</script>
+<style>
+  :root{
+    --brand:#2f6bff;
+    --brand-dark:#1d4ed8;
+    --brand-weak:#eef3ff;
+    --ink:#121926;
+    --sub:#5b6472;
+    --line:#e4e9f2;
+    --bg:#f6f8fc;
+    --card:#ffffff;
+    --radius:16px;
+    --max:1120px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei","Noto Sans SC","Helvetica Neue",Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;line-height:1.7;
+  }
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:var(--max);margin:0 auto;padding:0 24px}
+
+  /* ---------- 导航 ---------- */
+  .nav{
+    position:sticky;top:0;z-index:50;background:rgba(246,248,252,.82);
+    backdrop-filter:saturate(180%) blur(14px);border-bottom:1px solid var(--line);
+  }
+  .nav-in{display:flex;align-items:center;gap:14px;height:64px}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;letter-spacing:.2px}
+  .logo-mark{
+    width:34px;height:34px;border-radius:10px;background:var(--brand);display:grid;place-items:center;
+    box-shadow:0 6px 16px rgba(47,107,255,.28);flex:none;
+  }
+  .logo-mark svg{width:19px;height:19px}
+  .logo small{font-weight:500;color:#8a93a3;font-size:11.5px;letter-spacing:.12em;text-transform:uppercase}
+  .nav-links{display:flex;gap:26px;margin-left:26px;font-size:14px;color:#46505f}
+  .nav-links a:hover{color:var(--brand)}
+  .nav-cta{margin-left:auto;display:flex;gap:10px;align-items:center}
+
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:8px;
+    height:42px;padding:0 20px;border-radius:10px;border:1px solid var(--line);
+    background:#fff;color:var(--ink);font-size:14px;font-weight:500;cursor:pointer;
+    transition:transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+  }
+  .btn:hover{transform:translateY(-1px);border-color:#cfd8e6;box-shadow:0 8px 18px rgba(18,25,38,.06)}
+  .btn.primary{background:var(--brand);border-color:var(--brand);color:#fff;box-shadow:0 8px 20px rgba(47,107,255,.28)}
+  .btn.primary:hover{background:var(--brand-dark);border-color:var(--brand-dark)}
+  .btn.ghost{background:transparent;border-color:transparent;color:#46505f}
+  .btn.sm{height:36px;padding:0 14px;font-size:13px;border-radius:9px}
+
+  /* ---------- Hero ---------- */
+  .hero{position:relative;overflow:hidden;padding:74px 0 64px}
+  .hero::before{
+    content:"";position:absolute;inset:-20% -10% auto -10%;height:620px;
+    background:
+      radial-gradient(560px 300px at 18% 18%, rgba(47,107,255,.13), transparent 70%),
+      radial-gradient(480px 260px at 82% 8%, rgba(56,189,248,.12), transparent 70%);
+    pointer-events:none;
+  }
+  .hero-grid{
+    position:absolute;inset:0;
+    background-image:radial-gradient(rgba(18,25,38,.09) 1px, transparent 1px);
+    background-size:22px 22px;mask-image:linear-gradient(180deg,rgba(0,0,0,.5),transparent 72%);
+    pointer-events:none;
+  }
+  .hero-in{position:relative;display:grid;grid-template-columns:1.05fr .95fr;gap:56px;align-items:center}
+  .pill{
+    display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 12px;border-radius:999px;
+    background:#fff;border:1px solid #dbe4f4;color:#35507e;font-size:12.5px;font-weight:500;
+  }
+  .pill i{width:6px;height:6px;border-radius:50%;background:#22c55e;display:block}
+  h1{
+    margin:18px 0 16px;font-size:clamp(32px,4.6vw,52px);line-height:1.18;font-weight:800;letter-spacing:-.02em;
+  }
+  h1 em{font-style:normal;color:var(--brand);position:relative;white-space:nowrap}
+  h1 em::after{
+    content:"";position:absolute;left:0;right:0;bottom:4px;height:8px;border-radius:6px;
+    background:rgba(47,107,255,.14);z-index:-1;
+  }
+  .lead{font-size:16.5px;color:var(--sub);max-width:520px;margin:0 0 26px}
+  .hero-actions{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .hero-meta{display:flex;gap:18px;flex-wrap:wrap;margin-top:22px;font-size:12.5px;color:#7b8595}
+  .hero-meta span{display:inline-flex;align-items:center;gap:6px}
+  .hero-meta svg{width:14px;height:14px;color:#2fa36b}
+
+  /* 画布示意 */
+  .mock{
+    position:relative;background:#fff;border:1px solid var(--line);border-radius:18px;
+    box-shadow:0 30px 70px rgba(18,25,38,.12);overflow:hidden;
+  }
+  .mock-bar{display:flex;align-items:center;gap:6px;padding:11px 14px;border-bottom:1px solid #eef1f7;background:#fbfcfe}
+  .mock-bar i{width:9px;height:9px;border-radius:50%;background:#e3e8f0;display:block}
+  .mock-bar i:first-child{background:#ffd1d1}
+  .mock-bar i:nth-child(2){background:#ffe9c4}
+  .mock-bar i:nth-child(3){background:#cdeed2}
+  .mock-bar span{margin-left:10px;font-size:11.5px;color:#98a1ae}
+  .mock-body{position:relative;padding:16px;background:#fff}
+  .mock-body svg{display:block;width:100%;height:auto}
+  .chip{
+    position:absolute;display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 13px;
+    background:#fff;border:1px solid #dfe6f2;border-radius:999px;font-size:12.5px;color:#33405a;
+    box-shadow:0 10px 24px rgba(18,25,38,.12);white-space:nowrap;
+  }
+  .chip svg{width:14px;height:14px;color:var(--brand)}
+  .chip.a{right:-10px;top:70px}
+  .chip.b{left:36px;bottom:-16px}
+  .chip.c{right:26px;bottom:-14px}
+
+  /* ---------- 通用 section ---------- */
+  section{padding:64px 0}
+  .sec-head{max-width:640px;margin-bottom:34px}
+  .eyebrow{font-size:12.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--brand)}
+  h2{margin:8px 0 12px;font-size:clamp(24px,3vw,32px);line-height:1.3;letter-spacing:-.01em}
+  .sec-head p{margin:0;color:var(--sub);font-size:15px}
+
+  /* 图种卡片 */
+  .types{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+  .type-card{
+    background:var(--card);border:1px solid var(--line);border-radius:14px;padding:20px 18px 18px;
+    transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+  }
+  .type-card:hover{transform:translateY(-3px);border-color:#cfdcf5;box-shadow:0 16px 34px rgba(18,25,38,.08)}
+  .type-ico{
+    width:40px;height:40px;border-radius:11px;background:var(--brand-weak);display:grid;place-items:center;margin-bottom:13px;
+  }
+  .type-ico svg{width:21px;height:21px;color:var(--brand)}
+  .type-card h3{margin:0 0 6px;font-size:15.5px;display:flex;align-items:baseline;gap:8px}
+  .type-card h3 code{font-size:11px;color:#9aa4b2;font-weight:500;letter-spacing:.02em}
+  .type-card p{margin:0;font-size:13px;color:var(--sub);line-height:1.65}
+  .type-card .use{display:inline-block;margin-top:10px;font-size:11.5px;color:#6b8ac4;background:#f4f7fd;border-radius:6px;padding:2px 7px}
+
+  /* 三步 */
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;counter-reset:step}
+  .step{position:relative;background:#fff;border:1px solid var(--line);border-radius:14px;padding:24px 20px}
+  .step::before{
+    counter-increment:step;content:"0" counter(step);
+    font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--brand);
+  }
+  .step h3{margin:6px 0 8px;font-size:16px}
+  .step p{margin:0;font-size:13.5px;color:var(--sub)}
+  .step pre{
+    margin:14px 0 0;padding:12px;background:#f7f9fc;border:1px solid #edf1f7;border-radius:10px;
+    font-size:11.5px;line-height:1.75;color:#3c4658;overflow:auto;
+    font-family:"SFMono-Regular",Menlo,Consolas,"PingFang SC",monospace;
+  }
+
+  /* 论文友好 */
+  .paper{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .paper-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:24px}
+  .paper-card h3{margin:0 0 8px;font-size:17px;display:flex;align-items:center;gap:9px}
+  .paper-card h3 svg{width:18px;height:18px;color:var(--brand)}
+  .paper-card p{margin:0 0 14px;font-size:13.5px;color:var(--sub)}
+  .codes{background:#0f172a;border-radius:12px;padding:14px 16px;color:#c7d2fe;font-size:12px;overflow:auto;
+    font-family:"SFMono-Regular",Menlo,Consolas,monospace;line-height:1.8;white-space:pre-wrap}
+  .codes b{color:#93c5fd;font-weight:600}
+  .mini3{width:100%;border-collapse:collapse;font-size:10.5px;color:#3c4658;font-family:"PingFang SC","Microsoft YaHei",sans-serif}
+  .mini3 th,.mini3 td{padding:3px 4px;text-align:left;white-space:nowrap}
+  .mini3 thead tr{border-top:2px solid #1e293b;border-bottom:1px solid #1e293b}
+  .mini3 tbody tr:last-child{border-bottom:2px solid #1e293b}
+  .worddemo{background:#fbfcfe;border:1px dashed #dbe4f4;border-radius:12px;padding:12px;text-align:center}
+  .worddemo .im{height:86px;border-radius:6px;border:1px solid #e6ebf5;background:
+    repeating-linear-gradient(90deg,#fff,#fff 18px,#f2f5fb 18px,#f2f5fb 19px);margin-bottom:8px}
+  .worddemo p{margin:0;font-size:11px;color:#7c8798}
+
+  /* 特性 */
+  .feats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .feat{background:#fff;border:1px solid var(--line);border-radius:14px;padding:18px}
+  .feat h4{margin:0 0 4px;font-size:14px}
+  .feat p{margin:0;font-size:12.5px;color:var(--sub)}
+
+  /* FAQ */
+  details{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 18px;margin-bottom:10px}
+  details[open]{border-color:#cfdcf5}
+  summary{cursor:pointer;font-size:14px;font-weight:600;list-style:none;display:flex;justify-content:space-between;gap:12px}
+  summary::-webkit-details-marker{display:none}
+  summary::after{content:"+";color:#9aa4b2;font-weight:400}
+  details[open] summary::after{content:"–"}
+  details p{margin:10px 0 0;font-size:13.5px;color:var(--sub)}
+
+  /* CTA */
+  .cta{
+    background:linear-gradient(135deg,#1f4fd6,#2f6bff 46%,#4f8bff);
+    border-radius:20px;padding:44px 40px;color:#fff;display:flex;align-items:center;gap:28px;flex-wrap:wrap;
+    box-shadow:0 26px 60px rgba(47,107,255,.28);
+  }
+  .cta h2{margin:0 0 8px;color:#fff}
+  .cta p{margin:0;color:rgba(255,255,255,.86);font-size:14.5px}
+  .cta .btn{margin-left:auto;background:#fff;color:var(--brand);border-color:#fff;height:46px;padding:0 26px;font-weight:600}
+  .cta .btn:hover{box-shadow:0 10px 24px rgba(0,0,0,.18)}
+
+  footer{border-top:1px solid var(--line);padding:30px 0 40px;color:#8a93a3;font-size:12.5px}
+  .foot-in{display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+  .foot-in .right{margin-left:auto;display:flex;gap:18px;flex-wrap:wrap}
+  footer a:hover{color:var(--brand)}
+
+  /* ---------- 响应式 ---------- */
+  @media (max-width: 980px){
+    .hero-in{grid-template-columns:1fr;gap:40px}
+    .lead{max-width:none}
+    .types{grid-template-columns:repeat(2,1fr)}
+    .feats{grid-template-columns:repeat(2,1fr)}
+    .steps{grid-template-columns:1fr}
+    .paper{grid-template-columns:1fr}
+  }
+  @media (max-width: 720px){
+    .nav-links{display:none}
+    .nav-in{height:58px;gap:10px}
+    .nav-cta .btn.ghost{display:none}
+    .hero{padding:40px 0 44px}
+    section{padding:44px 0}
+    .types{grid-template-columns:1fr}
+    .feats{grid-template-columns:1fr}
+    .chip.a{right:0;top:auto;bottom:auto;left:0;position:static;margin-top:10px;display:inline-flex}
+    .chip.b,.chip.c{display:none}
+    .chip{display:none}
+    .mock-body{padding:12px}
+    .cta{padding:30px 22px;gap:16px}
+    .cta .btn{margin-left:0;width:100%}
+    .foot-in{flex-direction:column;align-items:flex-start}
+    .foot-in .right{margin-left:0}
+    h1 em{white-space:normal}
+  }
+</style>
+</head>
+<body>
+
+<header class="nav">
+  <div class="wrap nav-in">
+    <a class="logo" href="./index.html">
+      <span class="logo-mark">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="9" y="2" width="6" height="5" rx="1.2" fill="#fff"/>
+          <rect x="2" y="17" width="6" height="5" rx="1.2" fill="#fff"/>
+          <rect x="9" y="17" width="6" height="5" rx="1.2" fill="#fff"/>
+          <rect x="16" y="17" width="6" height="5" rx="1.2" fill="#fff"/>
+          <path d="M12 7v4M5 17v-4h14v4M12 11v6" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </span>
+      图构 <small>DiagramCraft</small>
+    </a>
+    <nav class="nav-links">
+      <a href="#types">支持的图种</a>
+      <a href="#flow">使用流程</a>
+      <a href="#paper">写进论文</a>
+      <a href="#faq">常见问题</a>
+    </nav>
+    <div class="nav-cta">
+      <a class="btn ghost sm" href="#types">先看看能画什么</a>
+      <a class="btn primary sm" href="./editor.html">打开编辑器</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-grid"></div>
+    <div class="wrap hero-in">
+      <div>
+        <span class="pill"><i></i> 面向毕业设计 · 免费 · 免登录</span>
+        <h1>把一段文字，变成一张<em>能进论文</em>的图</h1>
+        <p class="lead">
+          图构是一套「文本驱动」的图表生成系统：用缩进、编号或建表语句描述系统结构，
+          自动排版成 9 种毕业设计常用图。复制图片即可粘贴进 Word，也可导出 A4 Word 文档与矢量图。
+        </p>
+        <div class="hero-actions">
+          <a class="btn primary" href="./editor.html">开始作图</a>
+          <a class="btn" href="#types">查看 9 种图与语法</a>
+        </div>
+        <div class="hero-meta">
+          <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg> 单文件离线运行</span>
+          <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg> 零依赖、无后端</span>
+          <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5" stroke-linecap="round" stroke-linejoin="round"/></svg> 数据只存本机</span>
+        </div>
+      </div>
+
+      <div class="mock" aria-hidden="true">
+        <div class="mock-bar"><i></i><i></i><i></i><span>图构 · 功能模块图</span></div>
+        <div class="mock-body">
+          <svg viewBox="0 0 520 330">
+            <g stroke="#d7dde8" stroke-width="1.4">
+              <path d="M260 62v26"/>
+              <path d="M138 88h244"/>
+              <path d="M138 88v22M382 88v22"/>
+              <path d="M138 150v20M382 150v20"/>
+              <path d="M60 170h156M60 170v20M110 170v20M180 170v20"/>
+              <path d="M306 170h152M306 170v20M356 170v20M426 170v20"/>
+            </g>
+            <g font-family="-apple-system,PingFang SC,sans-serif" font-size="13" text-anchor="middle" fill="#121926">
+              <rect x="196" y="24" width="128" height="38" rx="4" fill="#fff" stroke="#121926" stroke-width="1.6"/>
+              <text x="260" y="48">学生信息管理系统</text>
+
+              <rect x="88" y="110" width="100" height="40" rx="4" fill="#fff" stroke="#121926" stroke-width="1.6"/>
+              <text x="138" y="135">学生端</text>
+              <rect x="332" y="110" width="100" height="40" rx="4" fill="#fff" stroke="#121926" stroke-width="1.6"/>
+              <text x="382" y="135">教师端</text>
+
+              <g font-size="11.5">
+                <rect x="34" y="190" width="52" height="104" fill="#fff" stroke="#121926" stroke-width="1.4"/>
+                <text x="60" y="234" transform="rotate(-90 60 234)">个人信息查看</text>
+                <rect x="92" y="190" width="36" height="104" fill="#fff" stroke="#121926" stroke-width="1.4"/>
+                <text x="110" y="234" transform="rotate(-90 110 234)">课程查询</text>
+                <rect x="134" y="190" width="52" height="104" fill="#fff" stroke="#121926" stroke-width="1.4"/>
+                <text x="160" y="234" transform="rotate(-90 160 234)">成绩查询</text>
+                <rect x="306" y="190" width="52" height="104" fill="#fff" stroke="#121926" stroke-width="1.4"/>
+                <text x="332" y="234" transform="rotate(-90 332 234)">成绩管理</text>
+                <rect x="364" y="190" width="52" height="104" fill="#fff" stroke="#121926" stroke-width="1.4"/>
+                <text x="390" y="234" transform="rotate(-90 390 234)">考勤登记</text>
+                <rect x="422" y="190" width="52" height="104" fill="#fff" stroke="#121926" stroke-width="1.4"/>
+                <text x="448" y="234" transform="rotate(-90 448 234)">请假审批</text>
+              </g>
+            </g>
+          </svg>
+        </div>
+        <span class="chip a">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" stroke-linejoin="round"/></svg>
+          复制图片 → 贴进 Word
+        </span>
+        <span class="chip b">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12M7 10l5 5 5-5M5 21h14" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          PNG / SVG / Word
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 图种 -->
+  <section id="types">
+    <div class="wrap">
+      <div class="sec-head">
+        <div class="eyebrow">Diagram types</div>
+        <h2>9 种图，覆盖论文里的系统设计章节</h2>
+        <p>每种图都有自己的纯文本语法，写法固定、结果稳定。语法说明与可运行示例见编辑器里的「语法帮助」。</p>
+      </div>
+      <div class="types">
+        <div class="type-card">
+          <div class="type-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="9" y="2" width="6" height="4" rx="1"/><rect x="2" y="17" width="6" height="4" rx="1"/><rect x="9" y="17" width="6" height="4" rx="1"/><rect x="16" y="17" width="6" height="4" rx="1"/><path d="M12 6v5M5 17v-4h14v4M12 11v6" stroke-linecap="round"/></svg></div>
+          <h3>功能模块图 <code>module</code></h3>
+          <p>缩进写模块层级，自动排成树状结构，末级功能竖排显示。</p>
+          <span class="use">第 4 章 系统设计</span>
+        </div>
+        <div class="type-card">
+          <div class="type-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="3" width="20" height="5" rx="2.5"/><path d="M12 8v4"/><path d="M12 12l8 4-8 4-8-4 8-4z"/><path d="M12 20v2" stroke-linecap="round"/></svg></div>
+          <h3>流程图 <code>flow</code></h3>
+          <p><code>序号-类型-文本</code> 逐行描述节点，判断分支用「是 / 否」跳转。</p>
+          <span class="use">第 5 章 详细设计</span>
+        </div>
+        <div class="type-card">
+          <div class="type-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="5" cy="6" r="2"/><path d="M5 8v6M2 12h6"/><ellipse cx="16" cy="8" rx="6" ry="3.2"/><ellipse cx="16" cy="17" rx="6" ry="3.2"/><path d="M10 8h-1M10 17h-1" stroke-linecap="round"/></svg></div>
+          <h3>用例图 <code>usecase</code></h3>
+          <p>角色加缩进用例，支持 <code>&lt;i&gt;</code> 包含与 <code>&lt;e&gt;</code> 扩展关系。</p>
+          <span class="use">第 3 章 需求分析</span>
+        </div>
+        <div class="type-card">
+          <div class="type-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="18" height="5" rx="1.5"/><rect x="3" y="10" width="18" height="5" rx="1.5"/><rect x="3" y="17" width="18" height="4" rx="1.5"/></svg></div>
+          <h3>系统架构图 <code>architecture</code></h3>
+          <p>顶格写层级、缩进写模块，横切层自动用虚线区分。</p>
+          <span class="use">第 4 章 总体设计</span>
+        </div>
+        <div class="type-card">
+          <div class="type-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="3" width="6" height="4" rx="1"/><rect x="9" y="3" width="6" height="4" rx="1"/><rect x="16" y="3" width="6" height="4" rx="1"/><path d="M5 7v14M12 7v14M19 7v14"/><path d="M5 13h7M12 17h7" stroke-linecap="round"/></svg></div>
+          <h3>时序图 <code>sequence</code></h3>
+          <p><code>A -&gt; B：消息</code> 按时间排列，<code>--&gt;</code> 表示返回。</p>
+          <span class="use">第 5 章 交互设计</span>
+        </div>
+        <div class="type-card">
+          <div class="type-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 8h18M3 13h18"/><path d="M7 5.5h4M7 10.5h6" stroke-linecap="round"/></svg></div>
+          <h3>UML 类图 <code>uml</code></h3>
+          <p>类、属性、方法三段式，支持继承、实现、聚合、组合与多重度。</p>
+          <span class="use">第 4 章 类设计</span>
+        </div>
+        <div class="type-card">
+          <div class="type-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="8" width="8" height="7" rx="1"/><ellipse cx="17" cy="6" rx="4.5" ry="2.6"/><path d="M10 11h2.5"/><path d="M16 11l-1.5 2 1.5 2 1.5-2-1.5-2z"/></svg></div>
+          <h3>ER 属性图 <code>er</code></h3>
+          <p>粘贴建表语句，画成实体矩形、属性椭圆、联系菱形的 Chen 记法。</p>
+          <span class="use">第 4 章 数据库设计</span>
+        </div>
+        <div class="type-card">
+          <div class="type-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2" y="3" width="7" height="7" rx="1"/><rect x="15" y="3" width="7" height="7" rx="1"/><rect x="2" y="15" width="7" height="6" rx="1"/><rect x="15" y="15" width="7" height="6" rx="1"/><path d="M9 6.5h6M9 18h6M5.5 10v5M18.5 10v5"/></svg></div>
+          <h3>全局 ER 图 <code>globalEr</code></h3>
+          <p>实体框内直接列字段，外键用菱形连接并标注 1 / N。</p>
+          <span class="use">论文数据库设计</span>
+        </div>
+        <div class="type-card">
+          <div class="type-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 5h18M3 12h18M3 19h18"/><path d="M3 5v14" opacity=".35"/></svg></div>
+          <h3>数据库三线表 <code>table</code></h3>
+          <p>每张表排成标准三线表：字段、类型、长度、主键、可空、默认值、说明。</p>
+          <span class="use">论文表格规范</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 流程 -->
+  <section id="flow" style="background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line)">
+    <div class="wrap">
+      <div class="sec-head">
+        <div class="eyebrow">Workflow</div>
+        <h2>三步出图，不需要会画图</h2>
+        <p>不需要拖拽、不需要设计功底。会写缩进就会用，写不出来也可以让 AI 按规范生成。</p>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <h3>写结构，或让 AI 写</h3>
+          <p>按图种的语法写文本；也可以点编辑器里的「AI 提示词」，复制给豆包 / DeepSeek，把项目情况贴进去。</p>
+          <pre>学生信息管理系统
+  学生端
+    个人信息查看
+    课程查询</pre>
+        </div>
+        <div class="step">
+          <h3>自动排版</h3>
+          <p>点「生成图表」，系统按规则计算层级、间距、连线与文字方向，生成可缩放、可拖动的矢量图。</p>
+          <pre>模块 3 · 功能 12
+9 种图 · 自动布局
+样式可调 · 节点可拖</pre>
+        </div>
+        <div class="step">
+          <h3>贴进论文</h3>
+          <p>画布右上角「复制图片」，在 Word / WPS 里 Ctrl+V；或导出 A4 Word 文档、PNG、SVG。</p>
+          <pre>复制图片 → Ctrl+V
+导出 Word（A4 版心）
+导出 PNG（2 倍） / SVG</pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 论文 -->
+  <section id="paper">
+    <div class="wrap">
+      <div class="sec-head">
+        <div class="eyebrow">Thesis ready</div>
+        <h2>按论文的习惯出图</h2>
+        <p>毕设图的痛点不是“画不出来”，而是“贴进去就糊、格式不对、表格不三线”。这三件事单独处理。</p>
+      </div>
+      <div class="paper">
+        <div class="paper-card">
+          <h3>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" stroke-linejoin="round"/></svg>
+            复制图片，直接粘进 Word
+          </h3>
+          <p>2 倍像素密度输出，粘贴后仍是可缩放的嵌入图片，不模糊、不丢线条；尺寸不合适在 Word 里拉伸即可。</p>
+          <div class="worddemo">
+            <div class="im"></div>
+            <p>图　系统功能结构图</p>
+          </div>
+        </div>
+        <div class="paper-card">
+          <h3>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6z" stroke-linejoin="round"/><path d="M14 3v6h6" stroke-linejoin="round"/></svg>
+            导出 A4 Word 文档
+          </h3>
+          <p>自动套用 A4 纸张、2.5cm 页边距、15.5cm 版心宽度，图下带一行宋体图题；打开后另存为 .docx 即可排版。</p>
+          <div class="codes"><b>@page</b> { size: 21cm 29.7cm; margin: 2.5cm }
+<b>img</b> { width: 15.50cm }
+<b>字体</b> 宋体 · 图题 10.5pt</div>
+        </div>
+        <div class="paper-card">
+          <h3>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 5h18M3 12h18M3 19h18"/></svg>
+            数据库三线表
+          </h3>
+          <p>粘贴建表语句，自动生成符合论文规范的三线表：顶线与底线加粗、栏目线细线，字段说明取自 <code>COMMENT</code>。</p>
+          <table class="mini3">
+            <thead><tr><th>字段名</th><th>类型</th><th>主键</th><th>可空</th><th>说明</th></tr></thead>
+            <tbody>
+              <tr><td>id</td><td>BIGINT</td><td>Y</td><td>否</td><td>用户ID</td></tr>
+              <tr><td>username</td><td>VARCHAR(50)</td><td>N</td><td>否</td><td>用户名</td></tr>
+              <tr><td>phone</td><td>VARCHAR(20)</td><td>N</td><td>是</td><td>手机号</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="paper-card">
+          <h3>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z" stroke-linejoin="round"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5" stroke-linejoin="round"/></svg>
+            矢量导出，放大不糊
+          </h3>
+          <p>SVG 是矢量格式，可无损放大、可二次编辑；需要位图时再导出 PNG。9 种图共用同一套渲染与导出流程。</p>
+          <div class="codes"><b>PNG</b>  2× 高清，直接插入文档
+<b>SVG</b>  矢量，任意缩放 / 二次编辑
+<b>Word</b> A4 版心 + 图题，另存 docx</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 特性 -->
+  <section style="background:#fff;border-top:1px solid var(--line)">
+    <div class="wrap">
+      <div class="sec-head">
+        <div class="eyebrow">Engineering</div>
+        <h2>工程上的取舍</h2>
+        <p>没有后端、没有账号、没有第三方库，所有逻辑都在一个 HTML 文件里，答辩时也能直接演示。</p>
+      </div>
+      <div class="feats">
+        <div class="feat"><h4>单文件 · 零依赖</h4><p>原生 JS + SVG，不引用任何 CDN，断网可用。</p></div>
+        <div class="feat"><h4>免登录 · 无后端</h4><p>不采集数据，草稿存在浏览器 localStorage。</p></div>
+        <div class="feat"><h4>9 种语法规范</h4><p>每种图有固定文本文法，AI 也能稳定产出。</p></div>
+        <div class="feat"><h4>响应式</h4><p>手机端「编辑 / 预览」切换，支持双指缩放。</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section id="faq">
+    <div class="wrap">
+      <div class="sec-head">
+        <div class="eyebrow">FAQ</div>
+        <h2>常见问题</h2>
+      </div>
+      <details open>
+        <summary>要联网吗？要注册吗？</summary>
+        <p>都不需要。编辑器是一个单文件网页，下载后双击即可离线使用；数据只保存在你自己的浏览器里。</p>
+      </details>
+      <details>
+        <summary>AI 生成是什么意思？会消耗额度吗？</summary>
+        <p>系统本身不调用任何 AI 接口。它提供一份“提示词模板”：复制给豆包、DeepSeek、ChatGPT 等，让它们按本平台的语法输出文本，再粘回来渲染。是否消耗额度取决于你用的那个 AI。</p>
+      </details>
+      <details>
+        <summary>复制图片在手机上用不了？</summary>
+        <p>部分手机浏览器不允许网页写入图片剪贴板。这种情况请用「导出 PNG」，图片会保存到下载目录，再插入文档即可。</p>
+      </details>
+      <details>
+        <summary>三线表能直接改格式吗？</summary>
+        <p>三线表按论文规范固定为“顶线加粗、栏目线细线、底线加粗”，列宽按内容自适应；如果需要自定义列宽或合并单元格，建议导出后在 Word 里调整。</p>
+      </details>
+      <details>
+        <summary>和 tuxiaoshe 那个工具是什么关系？</summary>
+        <p>没有关系。本项目是独立实现，只借鉴了“文本生成图表”这一产品思路，代码、文案与素材均为自行编写。</p>
+      </details>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section style="padding-top:0">
+    <div class="wrap">
+      <div class="cta">
+        <div>
+          <h2>现在就把你的系统画出来</h2>
+          <p>打开编辑器，从「功能模块图」开始；左侧有示例，右侧实时出图。</p>
+        </div>
+        <a class="btn" href="./editor.html">打开编辑器 →</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot-in">
+    <span>图构 DiagramCraft · v1.2</span>
+    <span>面向毕业设计的文本驱动图表生成系统</span>
+    <div class="right">
+      <a href="./editor.html">编辑器</a>
+      <a href="#types">图种</a>
+      <a href="#faq">常见问题</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

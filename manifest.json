@@ -1,0 +1,34 @@
+{
+  "name": "diagram-studio",
+  "displayName": "图构 DiagramCraft",
+  "version": "1.0.0",
+  "type": "skill",
+  "description": "把中文项目描述转成 9 种工程图的可渲染纯文本，并提供离线渲染器与深链调用方式",
+  "entry": "renderer/index.html",
+  "license": "MIT",
+  "compatibility": ["Agent Skill (SKILL.md)", "Workbench", "Hugging Face Space"],
+  "diagramTypes": [
+    { "key": "module", "name": "功能模块图", "example": "examples/module.txt" },
+    { "key": "flow", "name": "流程图", "example": "examples/flow.txt" },
+    { "key": "usecase", "name": "用例图", "example": "references/syntax.md" },
+    { "key": "architecture", "name": "系统架构图", "example": "references/syntax.md" },
+    { "key": "sequence", "name": "时序图", "example": "references/syntax.md" },
+    { "key": "uml", "name": "UML 类图", "example": "examples/uml.txt" },
+    { "key": "er", "name": "ER 属性图", "example": "examples/shop.sql" },
+    { "key": "globalEr", "name": "全局 ER 图", "example": "examples/shop.sql" },
+    { "key": "table", "name": "数据库三线表", "example": "examples/shop.sql" }
+  ],
+  "files": [
+    "SKILL.md",
+    "references/syntax.md",
+    "prompts/master-prompt.md",
+    "renderer/index.html",
+    "examples/module.txt",
+    "examples/flow.txt",
+    "examples/uml.txt",
+    "examples/shop.sql",
+    "hf-space/README.md",
+    "hf-space/index.html",
+    "hf-space/editor.html"
+  ]
+}

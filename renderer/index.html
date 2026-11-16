@@ -1,0 +1,3465 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>图构 DiagramCraft · 面向毕业设计的文本驱动图表生成系统</title>
+<meta name="description" content="图构（DiagramCraft）：把中文项目描述转成功能模块图、流程图、用例图、系统架构图、时序图、UML 类图、ER 图、全局 ER 图与数据库三线表，可复制进 Word 或导出 PNG / SVG / Word，单文件离线、免登录。" />
+<meta property="og:title" content="图构 DiagramCraft · 毕业设计图表生成系统" />
+<meta property="og:description" content="文本一键生成 9 种毕业设计常用图，支持复制图片到 Word、导出 A4 Word 文档与矢量图。" />
+<meta property="og:type" content="website" />
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%232f6bff'/%3E%3Cpath d='M8 10h7v4H8zM17 18h7v4h-7zM11.5 14v6h2v-2h3.5v-2h-3.5v-2z' fill='%23ffffff'/%3E%3C/svg%3E" />
+<style>
+  :root{
+    --bg:#f4f5f7;
+    --panel:#ffffff;
+    --line:#e6e8ec;
+    --line-strong:#d7dae0;
+    --text:#1d2129;
+    --muted:#8a9099;
+    --primary:#2f6bff;
+    --primary-weak:#eef3ff;
+    --shadow:0 10px 30px rgba(17, 24, 39, .08);
+    --radius:12px;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  button{font-family:inherit;color:inherit}
+  button,select,input,textarea{outline:none}
+  ::selection{background:#dbe6ff}
+
+  /* ---------- 顶栏 ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:40;
+    height:60px;display:flex;align-items:center;gap:14px;
+    padding:0 20px;background:rgba(255,255,255,.92);
+    border-bottom:1px solid var(--line);backdrop-filter:blur(8px);
+  }
+  .brand{display:flex;align-items:center;gap:10px;margin-right:6px}
+  .brand-icon{
+    width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,#3b7bff,#1e55e0);
+    display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(47,107,255,.28);
+  }
+  .brand-icon svg{width:20px;height:20px;fill:#fff}
+  .brand-name{font-size:17px;font-weight:650;letter-spacing:.2px}
+  .badge{
+    font-size:11px;color:#5b6472;background:#f1f3f6;border:1px solid var(--line);
+    padding:2px 7px;border-radius:20px;line-height:1.5;white-space:nowrap;
+  }
+  .topbar .spacer{flex:1}
+  .type-pick{
+    display:flex;align-items:center;gap:8px;height:34px;padding:0 10px;border:1px solid var(--line-strong);
+    border-radius:8px;background:#fff;
+  }
+  .type-pick svg{width:15px;height:15px;color:#59606b;flex:none}
+  .type-pick select{border:0;background:transparent;font-size:13px;color:#242a33;cursor:pointer;max-width:156px}
+  .chk{display:flex;align-items:center;gap:8px;font-size:13px;color:#242a33;height:34px}
+  .chk input{width:16px;height:16px;accent-color:#2f6bff}
+  .btn{
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    height:34px;padding:0 13px;border:1px solid var(--line-strong);border-radius:8px;
+    background:#fff;font-size:13px;cursor:pointer;transition:.16s;white-space:nowrap;
+  }
+  .btn:hover{border-color:#b9c0cb;background:#fafbfc}
+  .btn:active{transform:translateY(1px)}
+  .btn.primary{background:var(--primary);border-color:var(--primary);color:#fff;box-shadow:0 4px 12px rgba(47,107,255,.24)}
+  .btn.primary:hover{background:#255ce6;border-color:#255ce6}
+  .btn.ghost{border-color:transparent;background:transparent}
+  .btn.ghost:hover{background:#f1f3f6}
+  .btn.sm{height:30px;padding:0 10px;font-size:12px}
+  .btn .ico{width:15px;height:15px;flex:none}
+
+  .menu-wrap{position:relative}
+  .menu{
+    position:absolute;top:calc(100% + 8px);right:0;min-width:200px;z-index:60;
+    background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);
+    padding:6px;display:none;
+  }
+  .menu.open{display:block}
+  .menu-item{
+    display:flex;align-items:center;gap:9px;width:100%;padding:9px 10px;border:0;background:transparent;
+    border-radius:7px;font-size:13px;cursor:pointer;text-align:left;
+  }
+  .menu-item:hover{background:#f4f6fa}
+  .menu-item svg{width:16px;height:16px;flex:none;color:#59606b}
+  .menu-sep{height:1px;background:var(--line);margin:5px 4px}
+
+  /* ---------- 主体 ---------- */
+  .workspace{
+    display:grid;grid-template-columns:400px minmax(0,1fr);
+    gap:14px;padding:14px 20px 20px;height:calc(100vh - 60px);
+  }
+  .pane{
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    display:flex;flex-direction:column;min-height:0;overflow:hidden;
+  }
+  .pane-head{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:13px 14px 9px;font-size:14px;font-weight:600;
+  }
+  .pane-head .sub{font-size:12px;color:var(--muted);font-weight:400}
+  .editor-tools{display:flex;align-items:center;gap:6px;padding:0 12px 10px;flex-wrap:wrap}
+  .tool-btn{
+    display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 9px;
+    background:#fff;border:1px solid var(--line);border-radius:7px;font-size:12px;color:#4a515c;
+    cursor:pointer;
+  }
+  .tool-btn:hover{background:#fafbfc;border-color:var(--line-strong)}
+  .tool-btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+  .tool-btn.primary:hover{background:#255ce6}
+  .tool-btn svg{width:14px;height:14px}
+  #outline{
+    flex:1;min-height:180px;resize:none;border:0;border-top:1px solid var(--line);
+    padding:16px 18px;font-family:"SFMono-Regular",Menlo,Consolas,"PingFang SC",monospace;
+    font-size:13.5px;line-height:1.95;color:#242a33;background:#fff;tab-size:2;white-space:pre;
+  }
+  #outline::placeholder{color:#b3b8c1}
+  .pane-foot{
+    display:flex;align-items:center;gap:16px;
+    padding:9px 16px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);
+    background:#fcfcfd;flex-wrap:wrap;
+  }
+  .pane-foot b{color:#4a515c;font-weight:600;margin-left:2px}
+
+  /* ---------- 画布 ---------- */
+  .canvas-pane{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;min-height:0}
+  .canvas-toolbar{
+    position:absolute;top:12px;right:12px;z-index:12;display:flex;gap:6px;
+    background:rgba(255,255,255,.9);padding:4px;border:1px solid var(--line);border-radius:9px;
+    box-shadow:0 6px 18px rgba(17,24,39,.06);backdrop-filter:blur(6px);
+  }
+  .viewport{
+    position:absolute;inset:0;overflow:hidden;cursor:grab;
+    background-color:#fafbfc;
+    background-image:radial-gradient(#dfe3e9 1px,transparent 1px);
+    background-size:18px 18px;
+  }
+  .viewport.panning{cursor:grabbing}
+  #stage{
+    position:absolute;top:0;left:0;transform-origin:0 0;
+    background:#fff;box-shadow:0 8px 40px rgba(17,24,39,.10);
+    display:block;
+  }
+  #stage g.node{cursor:grab}
+  #stage g.node:active{cursor:grabbing}
+  #stage g.node:hover rect{stroke:#2f6bff}
+  #stage text{user-select:none}
+
+  .zoom{
+    position:absolute;left:14px;bottom:14px;z-index:12;display:flex;align-items:center;
+    background:#fff;border:1px solid var(--line);border-radius:9px;box-shadow:0 6px 18px rgba(17,24,39,.07);
+    overflow:hidden;
+  }
+  .zoom button{
+    width:34px;height:34px;border:0;background:transparent;cursor:pointer;font-size:16px;color:#4a515c;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .zoom button:hover{background:#f4f6fa}
+  .zoom .val{min-width:52px;text-align:center;font-size:12px;color:#4a515c;border-left:1px solid var(--line);border-right:1px solid var(--line);height:34px;display:flex;align-items:center;justify-content:center}
+  .zoom .fit{width:auto;padding:0 11px;font-size:12px;border-left:1px solid var(--line)}
+  .canvas-hint{
+    position:absolute;right:16px;bottom:19px;z-index:10;font-size:12px;color:#9aa0aa;
+    pointer-events:none;user-select:none;
+  }
+
+  /* ---------- 弹窗 ---------- */
+  .overlay{
+    position:fixed;inset:0;z-index:100;background:rgba(17,24,39,.38);
+    display:none;align-items:center;justify-content:center;padding:20px;
+  }
+  .overlay.open{display:flex}
+  .modal{
+    width:100%;max-width:560px;max-height:86vh;background:#fff;border-radius:14px;
+    box-shadow:0 24px 80px rgba(17,24,39,.24);display:flex;flex-direction:column;overflow:hidden;
+  }
+  .modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 20px 6px}
+  .modal-head h3{margin:0;font-size:16px;font-weight:650}
+  .modal-close{border:0;background:transparent;width:28px;height:28px;border-radius:6px;cursor:pointer;color:#8a9099;font-size:18px}
+  .modal-close:hover{background:#f1f3f6;color:#333}
+  .modal-body{padding:6px 20px 18px;overflow:auto}
+  .modal-foot{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;border-top:1px solid var(--line);background:#fcfcfd}
+  .modal-foot .right{display:flex;gap:8px}
+
+  .style-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px 18px}
+  .field label{display:block;font-size:12px;color:#5b6472;margin-bottom:7px}
+  .field.wide{grid-column:1/-1}
+  .stepper{
+    display:flex;align-items:center;height:34px;border:1px solid var(--line-strong);border-radius:8px;overflow:hidden;background:#fff;
+  }
+  .stepper button{width:32px;height:100%;border:0;background:transparent;cursor:pointer;color:#5b6472;font-size:15px}
+  .stepper button:hover{background:#f4f6fa}
+  .stepper input{
+    flex:1;min-width:0;border:0;text-align:center;font-size:13px;height:100%;color:#242a33;
+    -moz-appearance:textfield;background:#fff;
+  }
+  .stepper input::-webkit-outer-spin-button,.stepper input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .select{
+    width:100%;height:34px;border:1px solid var(--line-strong);border-radius:8px;background:#fff;
+    padding:0 10px;font-size:13px;color:#242a33;cursor:pointer;
+  }
+  .unit{font-size:12px;color:#8a9099;margin-left:8px}
+  .field-row{display:flex;align-items:center}
+  .field-row .stepper{flex:1}
+
+  /* 帮助气泡 */
+  .popover{
+    position:fixed;z-index:120;width:330px;background:#fff;border:1px solid var(--line);
+    border-radius:12px;box-shadow:var(--shadow);padding:14px 15px;display:none;font-size:12.5px;color:#4a515c;line-height:1.8;
+  }
+  .popover.open{display:block}
+  .popover h4{margin:0 0 8px;font-size:13px;color:#1d2129}
+  .popover ul{margin:0;padding-left:16px}
+  .popover li{margin:4px 0}
+  .popover code{background:#f1f3f6;border-radius:4px;padding:1px 4px;font-size:11.5px}
+
+  /* AI 提示词 */
+  .ai-steps{margin:2px 0 12px;padding-left:18px;font-size:12.5px;color:#4a515c;line-height:1.85}
+  .ai-steps li{margin:2px 0}
+  #aiPrompt{
+    margin:0;padding:13px 14px;background:#f7f8fa;border:1px solid var(--line);border-radius:10px;
+    font-family:"SFMono-Regular",Menlo,Consolas,"PingFang SC",monospace;
+    font-size:12.5px;line-height:1.8;color:#242a33;white-space:pre-wrap;word-break:break-word;
+    max-height:44vh;overflow:auto;user-select:text;
+  }
+  .ai-note{margin:10px 0 0;font-size:12px;color:#8a9099}
+
+  /* 我的图表 */
+  .project-list{display:flex;flex-direction:column;gap:9px;margin-top:10px}
+  .project{
+    display:flex;align-items:center;gap:12px;padding:12px 13px;border:1px solid var(--line);border-radius:10px;background:#fff;
+  }
+  .project:hover{border-color:#c9d3e6;background:#fbfcfe}
+  .project .p-main{flex:1;min-width:0}
+  .project .p-name{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .project .p-meta{font-size:11.5px;color:var(--muted);margin-top:3px}
+  .project .p-actions{display:flex;gap:6px}
+  .empty{
+    padding:28px 16px;text-align:center;color:var(--muted);font-size:13px;
+    border:1px dashed var(--line-strong);border-radius:10px;margin-top:10px;line-height:1.9;
+  }
+  .list-actions{display:flex;gap:8px;margin-top:12px}
+
+  /* 提示 */
+  #toast{
+    position:fixed;left:50%;bottom:36px;transform:translate(-50%,16px);z-index:300;
+    background:#1f2329;color:#fff;font-size:13px;padding:9px 16px;border-radius:8px;
+    opacity:0;pointer-events:none;transition:.22s;box-shadow:0 10px 24px rgba(0,0,0,.18);
+    max-width:80vw;
+  }
+  #toast.show{opacity:1;transform:translate(-50%,0)}
+
+  @media (max-width: 980px){
+    .workspace{grid-template-columns:1fr;grid-template-rows:44vh 1fr;height:auto;min-height:calc(100vh - 60px)}
+    .pane{min-height:0}
+    .canvas-pane{min-height:420px;height:calc(100vh - 60px - 44vh - 40px)}
+    .brand .badge{display:none}
+    .topbar{padding:0 12px;gap:8px}
+    .topbar .btn span{display:none}
+    .topbar .btn{padding:0 10px}
+    .canvas-hint{display:none}
+  }
+
+  /* 无界面模式：供命令行截图 / 嵌入使用 */
+  body.bare{background:#fff;overflow:hidden}
+  body.bare .topbar,body.bare .mobile-tabs,body.bare .pane,body.bare .canvas-toolbar,
+  body.bare .zoom,body.bare .canvas-hint,body.bare .toast{display:none!important}
+  body.bare .workspace{display:block;padding:0;height:auto;min-height:0}
+  body.bare .canvas-pane{height:auto;min-height:0;border:0;border-radius:0;box-shadow:none;background:#fff}
+  body.bare .viewport{position:static;overflow:visible;background:#fff}
+  body.bare #stage{position:static;margin:0;box-shadow:none;transform:none!important;background:#fff}
+
+  /* ---------- 手机端 ---------- */
+  .mobile-tabs{display:none}
+  .viewport{touch-action:none}
+  #stage g.node{touch-action:none}
+
+  @media (max-width: 760px){
+    .topbar{
+      height:52px;padding:0 10px;gap:7px;
+      padding-top:env(safe-area-inset-top);
+    }
+    .brand{gap:8px;margin-right:0;min-width:0}
+    .brand-icon{width:30px;height:30px;border-radius:9px;flex:none}
+    .brand-icon svg{width:17px;height:17px}
+    .brand-name{font-size:15px;max-width:76px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .badge{display:none}
+    .type-pick{flex:1;min-width:0;height:32px;padding:0 10px;gap:6px}
+    .type-pick > svg{display:none}
+    .type-pick select{width:100%;max-width:none;font-size:13px;padding-right:14px}
+    .topbar .spacer{display:none}
+    .topbar .btn{height:32px;padding:0 9px;flex:none}
+    .topbar .btn span{display:none}
+    .topbar .btn .ico{width:17px;height:17px}
+    .topbar .btn.primary{padding:0 10px}
+
+    .mobile-tabs{
+      display:flex;gap:4px;padding:6px 10px;background:var(--bg);
+      position:sticky;top:calc(52px + env(safe-area-inset-top));z-index:35;
+    }
+    .mt-btn{
+      flex:1;height:34px;border:1px solid var(--line);background:#fff;border-radius:8px;
+      font-size:13px;color:#5b6472;
+    }
+    .mt-btn.active{background:var(--primary-weak);border-color:#c6d7ff;color:var(--primary);font-weight:600}
+
+    .workspace{
+      display:block;padding:8px 10px calc(10px + env(safe-area-inset-bottom));
+      height:calc(100vh - 98px);
+      height:calc(100dvh - 52px - 46px - env(safe-area-inset-top));min-height:0;
+      overscroll-behavior:none;
+    }
+    .pane,.canvas-pane{height:100%;border-radius:10px}
+    .canvas-pane{min-height:0}
+    body[data-view="edit"] .canvas-pane{display:none}
+    body[data-view="preview"] .pane{display:none}
+
+    .pane-head{padding:11px 12px 8px}
+    .pane-head .sub{display:none}
+    .editor-tools{padding:0 10px 10px;flex-wrap:wrap;gap:7px}
+    .tool-btn{height:34px;flex:none;white-space:nowrap}
+    #btnGenerate{flex:1 0 100%;order:9;height:38px;margin-top:2px}
+    #outline{font-size:14px;line-height:1.9;padding:14px 14px 18px;white-space:pre-wrap;overflow-wrap:anywhere}
+    #btnExport svg:last-of-type{display:none}
+    .pane-foot{padding:8px 12px;gap:12px;font-size:11.5px}
+
+    .canvas-toolbar{top:8px;right:8px;padding:3px}
+    .canvas-toolbar .btn.sm{height:32px;padding:0 9px}
+    .zoom{left:8px;bottom:calc(10px + env(safe-area-inset-bottom))}
+    .zoom button{width:38px;height:38px}
+    .zoom .val{min-width:50px;height:38px}
+    .zoom .fit{height:38px}
+    .canvas-hint{display:none}
+
+    .overlay{padding:0;align-items:flex-end}
+    .modal{
+      max-width:none;max-height:92dvh;border-radius:16px 16px 0 0;
+    }
+    .modal-head{padding:16px 16px 4px}
+    .modal-body{padding:4px 16px 14px}
+    .modal-foot{padding:12px 16px calc(12px + env(safe-area-inset-bottom))}
+    .style-grid{grid-template-columns:1fr;gap:12px}
+    #aiPrompt{max-height:44dvh;font-size:12px;padding:12px}
+    .ai-steps{font-size:12px}
+    .project{padding:11px 10px}
+    .list-actions{flex-wrap:wrap}
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-icon">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <rect x="9" y="2" width="6" height="5" rx="1.2" fill="#fff"/>
+        <rect x="2" y="17" width="6" height="5" rx="1.2" fill="#fff"/>
+        <rect x="9" y="17" width="6" height="5" rx="1.2" fill="#fff"/>
+        <rect x="16" y="17" width="6" height="5" rx="1.2" fill="#fff"/>
+        <path d="M12 7v4M5 17v-4h14v4M12 11v6" fill="none" stroke="#fff" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <span class="brand-name">图构</span>
+    <span class="badge">本地版 · 无需登录</span>
+  </div>
+  <div class="type-pick">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 20V9" stroke-linecap="round"/></svg>
+    <select id="typeSelect"></select>
+  </div>
+  <div class="spacer"></div>
+  <a class="btn" id="btnHome" href="./index.html">
+    <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l9-8 9 8" stroke-linejoin="round"/><path d="M5 10v10h14V10" stroke-linejoin="round"/></svg>
+    <span>首页</span>
+  </a>
+  <button class="btn" id="btnProjects">
+    <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h6l2 2h8v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h4l2 3z" stroke-linejoin="round"/></svg>
+    <span>我的图表</span>
+  </button>
+  <button class="btn" id="btnSave">
+    <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" stroke-linejoin="round"/><path d="M7 3v6h8V3M7 21v-7h10v7" stroke-linejoin="round"/></svg>
+    <span>保存</span>
+  </button>
+  <div class="menu-wrap" id="exportWrap">
+    <button class="btn primary" id="btnExport">
+      <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v12M7 10l5 5 5-5M5 21h14" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>导出</span>
+      <svg class="ico" style="width:11px;height:11px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div class="menu" id="exportMenu">
+      <button class="menu-item" data-export="copy">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" stroke-linejoin="round"/></svg>
+        复制图片（粘贴到 Word）
+      </button>
+      <button class="menu-item" data-export="png">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M21 16l-5-5-9 9" stroke-linejoin="round"/></svg>
+        PNG 图片（2 倍高清）
+      </button>
+      <button class="menu-item" data-export="svg">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9L12 3z" stroke-linejoin="round"/><path d="M12 12l8-4.5M12 12v9M12 12L4 7.5" stroke-linejoin="round"/></svg>
+        SVG 矢量图
+      </button>
+      <button class="menu-item" data-export="word">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6z" stroke-linejoin="round"/><path d="M14 3v6h6" stroke-linejoin="round"/><path d="M8 13l1.3 5L11 14l1.7 4L14 13" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Word 文档（.doc）
+      </button>
+      <button class="menu-item" data-export="drawio">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="7" height="6" rx="1"/><rect x="14" y="15" width="7" height="6" rx="1"/><path d="M6.5 9v5a2 2 0 0 0 2 2H14" stroke-linecap="round"/></svg>
+        draw.io 源文件
+      </button>
+      <div class="menu-sep"></div>
+      <button class="menu-item" data-export="json">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9l-6-6z" stroke-linejoin="round"/><path d="M14 3v6h6M9 13h6M9 17h4" stroke-linecap="round"/></svg>
+        JSON 项目文件
+      </button>
+    </div>
+  </div>
+</header>
+
+<div class="mobile-tabs" id="mobileTabs">
+  <button class="mt-btn active" data-view="edit">编辑</button>
+  <button class="mt-btn" data-view="preview">预览</button>
+</div>
+
+<main class="workspace">
+  <aside class="pane">
+    <div class="pane-head">
+      <span id="paneTitle">功能模块图</span>
+      <span class="sub" id="paneSub">缩进即层级</span>
+    </div>
+    <div class="editor-tools">
+      <button class="tool-btn" id="btnHelp">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.2a2.5 2.5 0 1 1 3.6 2.2c-.8.5-1.2 1-1.2 1.9M12 17h.01" stroke-linecap="round"/></svg>
+        语法帮助
+      </button>
+      <button class="tool-btn" id="btnAi">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3z" stroke-linejoin="round"/><path d="M18 14.5l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8z" stroke-linejoin="round"/></svg>
+        AI 提示词
+      </button>
+      <div class="menu-wrap" id="sampleWrap">
+        <button class="tool-btn" id="btnSamples">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 4h10v16H7z"/><path d="M4 7v13h10" opacity=".5"/></svg>
+          示例
+          <svg style="width:11px;height:11px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <div class="menu" id="sampleMenu" style="left:0;right:auto"></div>
+      </div>
+      <button class="tool-btn primary" id="btnGenerate">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3z" stroke-linejoin="round"/><path d="M18.5 15.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2z" stroke-linejoin="round"/></svg>
+        生成图表
+      </button>
+    </div>
+    <textarea id="outline" spellcheck="false" placeholder="第一行写系统名称，下一级缩进 2 个空格写模块，再缩进写功能……"></textarea>
+    <div class="pane-foot" id="paneFoot">
+      <span>模块 <b id="statModules">0</b></span>
+      <span>功能 <b id="statFunctions">0</b></span>
+    </div>
+  </aside>
+
+  <section class="canvas-pane">
+    <div class="canvas-toolbar">
+      <button class="btn sm" id="btnStyle">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h4L19 9l-4-4L4 16v4z" stroke-linejoin="round"/><path d="M13 7l4 4" stroke-linecap="round"/></svg>
+        样式
+      </button>
+      <button class="btn sm" id="btnRelayout">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 6h16M4 12h10M4 18h7" stroke-linecap="round"/><path d="M18 15l3 3-3 3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        重排
+      </button>
+      <button class="btn sm primary" id="btnCopyImg">
+        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" stroke-linejoin="round"/></svg>
+        复制图片
+      </button>
+    </div>
+    <div class="viewport" id="viewport">
+      <svg id="stage" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+    <div class="zoom">
+      <button id="btnZoomIn" title="放大">+</button>
+      <div class="val" id="zoomVal">90%</div>
+      <button id="btnZoomOut" title="缩小">−</button>
+      <button class="fit" id="btnFit" title="适应画布">适应</button>
+    </div>
+    <div class="canvas-hint">拖动画布平移 · 节点可自由拖动 · 滚轮缩放</div>
+  </section>
+</main>
+
+<!-- 语法帮助 -->
+<div class="popover" id="helpPopover">
+  <h4 id="helpTitle">语法</h4>
+  <div id="helpBody"></div>
+</div>
+
+<!-- AI 提示词 -->
+<div class="overlay" id="aiOverlay">
+  <div class="modal" style="max-width:680px">
+    <div class="modal-head">
+      <h3>AI 提示词 · <span id="aiTypeName"></span></h3>
+      <button class="modal-close" data-close="aiOverlay">×</button>
+    </div>
+    <div class="modal-body">
+      <ol class="ai-steps">
+        <li>点「复制提示词」，粘到豆包 / DeepSeek / ChatGPT 等对话框。</li>
+        <li>把末尾「我的项目情况」换成你的题目、角色和功能点，发送。</li>
+        <li>把 AI 回复的纯文本整段粘回左侧输入框，点「生成图表」。</li>
+      </ol>
+      <pre id="aiPrompt"></pre>
+      <p class="ai-note">AI 偶尔会多嘴加代码块或解释，粘回来之前把围栏和说明文字删掉即可。</p>
+    </div>
+    <div class="modal-foot">
+      <span style="font-size:12px;color:#8a9099">已按当前图种生成</span>
+      <div class="right">
+        <button class="btn sm" data-close="aiOverlay">关闭</button>
+        <button class="btn primary sm" id="btnCopyPrompt">复制提示词</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 样式弹窗 -->
+<div class="overlay" id="styleOverlay">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-head">
+      <h3>图表样式</h3>
+      <button class="modal-close" data-close="styleOverlay">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="style-grid">
+        <div class="field" data-when="module">
+          <label>纵向层级间距</label>
+          <div class="stepper">
+            <button data-step="levelGap" data-delta="-2">−</button>
+            <input type="number" id="inLevelGap" min="68" max="100" step="2">
+            <button data-step="levelGap" data-delta="2">+</button>
+          </div>
+        </div>
+        <div class="field" data-when="module">
+          <label>横向节点间距</label>
+          <div class="stepper">
+            <button data-step="nodeGap" data-delta="-2">−</button>
+            <input type="number" id="inNodeGap" min="34" max="52" step="2">
+            <button data-step="nodeGap" data-delta="2">+</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>字体</label>
+          <select class="select" id="inFont">
+            <option value="宋体">宋体</option>
+            <option value="黑体">黑体</option>
+            <option value="微软雅黑">微软雅黑</option>
+            <option value="仿宋">仿宋</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>字体大小</label>
+          <div class="stepper">
+            <button data-step="fontSize" data-delta="-1">−</button>
+            <input type="number" id="inFontSize" min="10" max="36" step="1">
+            <button data-step="fontSize" data-delta="1">+</button>
+          </div>
+        </div>
+        <div class="field" data-when="line">
+          <label>箭头样式</label>
+          <select class="select" id="inArrow">
+            <option value="无箭头">无箭头</option>
+            <option value="实心箭头">实心箭头</option>
+            <option value="空心箭头">空心箭头</option>
+          </select>
+        </div>
+        <div class="field" data-when="line">
+          <label>连线粗细</label>
+          <div class="field-row">
+            <div class="stepper">
+              <button data-step="lineWidth" data-delta="-0.1">−</button>
+              <input type="number" id="inLineWidth" min="1" max="3" step="0.1">
+              <button data-step="lineWidth" data-delta="0.1">+</button>
+            </div>
+            <span class="unit">磅</span>
+          </div>
+        </div>
+        <div class="field" data-when="pk">
+          <label>主键下划线</label>
+          <label class="chk"><input type="checkbox" id="inPk"> 字段名加下划线</label>
+        </div>
+        <div class="field" data-when="attrs">
+          <label>内容</label>
+          <label class="chk"><input type="checkbox" id="inAttrs"> 显示字段属性</label>
+        </div>
+        <div class="field" data-when="table">
+          <label>表格行距</label>
+          <div class="stepper">
+            <button data-step="rowGap" data-delta="-0.1">−</button>
+            <input type="number" id="inRowGap" min="1" max="2.4" step="0.1">
+            <button data-step="rowGap" data-delta="0.1">+</button>
+          </div>
+        </div>
+        <div class="field" data-when="table">
+          <label>内容居中</label>
+          <label class="chk"><input type="checkbox" id="inCenter"> 单元格文字居中</label>
+        </div>
+        <div class="field" data-when="table">
+          <label>表头背景</label>
+          <select class="select" id="inHeadBg">
+            <option value="transparent">透明</option>
+            <option value="#f2f4f7">浅灰</option>
+            <option value="#eef3ff">浅蓝</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn ghost sm" id="btnResetStyle">恢复默认</button>
+      <div class="right">
+        <button class="btn primary sm" data-close="styleOverlay">完成</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 我的图表 -->
+<div class="overlay" id="projectsOverlay">
+  <div class="modal">
+    <div class="modal-head">
+      <h3>我的图表 <span style="font-size:12px;color:#8a9099;font-weight:400">（仅保存在本机浏览器）</span></h3>
+      <button class="modal-close" data-close="projectsOverlay">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="list-actions">
+        <button class="btn sm" id="btnNew">新建图表</button>
+        <button class="btn sm" id="btnImport">导入 JSON</button>
+        <input type="file" id="importFile" accept="application/json,.json" hidden>
+      </div>
+      <div class="project-list" id="projectList"></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function(){
+  'use strict';
+
+  /* ================= 常量与状态 ================= */
+  const FONTS = {
+    '宋体':     'SimSun, STSong, Songti SC, serif',
+    '黑体':     'SimHei, STHeiti, Heiti SC, sans-serif',
+    '微软雅黑': 'Microsoft YaHei, PingFang SC, sans-serif',
+    '仿宋':     'FangSong, STFangsong, serif'
+  };
+  const DRAWIO_FONTS = {
+    '宋体':'SimSun', '黑体':'SimHei', '微软雅黑':'Microsoft YaHei', '仿宋':'FangSong'
+  };
+  const DEFAULT_STYLE = {
+    levelGap:80, nodeGap:42, font:'黑体', fontSize:25, arrow:'无箭头', lineWidth:1.8,
+    pkUnderline:true, showAttrs:true, rowGap:1.6, center:false, headBg:'transparent'
+  };
+  // 各图种的默认字号（与原站观感对齐）
+  const TYPE_FONT_SIZE = {
+    module:25, flow:16, usecase:16, architecture:15, sequence:14, uml:13, er:15, globalEr:15, table:13
+  };
+  const DRAFT_KEY = 'moduledraw.draft.v2';
+  const PROJECTS_KEY = 'moduledraw.projects.v2';
+  const MAX_DEPTH = 4; // 根 + 最多 4 级模块
+
+  const DEFAULT_OUTLINE = [
+    '学生信息管理系统',
+    '  学生端',
+    '    个人信息查看',
+    '    课程查询',
+    '    成绩查询',
+    '    请假申请',
+    '  教师端',
+    '    学生信息查询',
+    '    成绩管理',
+    '    考勤登记',
+    '    请假审批',
+    '  管理端',
+    '    学生信息管理',
+    '    教师信息管理',
+    '    课程管理',
+    '    班级管理'
+  ].join('\n');
+
+  const SAMPLES = [
+    { key:'student', label:'学生信息管理系统', text: DEFAULT_OUTLINE },
+    { key:'library', label:'在线图书管理系统', text:[
+      '在线图书管理系统',
+      '  用户端',
+      '    用户登录',
+      '    图书查询',
+      '    图书借阅',
+      '    借阅记录查看',
+      '    个人信息管理',
+      '  管理端',
+      '    图书管理',
+      '    用户管理',
+      '    借阅管理',
+      '    公告管理'
+    ].join('\n') },
+    { key:'market', label:'校园二手交易平台', text:[
+      '校园二手交易平台',
+      '  买家端',
+      '    商品浏览',
+      '    搜索筛选',
+      '    下单购买',
+      '    订单管理',
+      '    收藏商品',
+      '  卖家端',
+      '    发布商品',
+      '    商品管理',
+      '    订单处理',
+      '    收益查看',
+      '  管理端',
+      '    用户管理',
+      '    商品审核',
+      '    纠纷处理',
+      '    数据统计'
+    ].join('\n') },
+    { key:'campus', label:'智慧校园管理系统（多级）', text:[
+      '智慧校园管理系统',
+      '  教学管理',
+      '    课程管理',
+      '      课程录入',
+      '      课程排课',
+      '      课程调整',
+      '    成绩管理',
+      '      成绩录入',
+      '      成绩审核',
+      '      成绩发布',
+      '  学生管理',
+      '    学籍管理',
+      '      新生建档',
+      '      学籍变更',
+      '    考勤管理',
+      '      请假审批',
+      '      考勤统计',
+      '  后勤管理',
+      '    宿舍管理',
+      '      入住登记',
+      '      维修报修',
+      '    食堂管理',
+      '      菜品管理',
+      '      消费统计'
+    ].join('\n') }
+  ];
+
+  function defaultStyle(type){
+    return Object.assign({}, DEFAULT_STYLE, { fontSize: TYPE_FONT_SIZE[type] || 15 });
+  }
+
+  const state = {
+    type: 'module',
+    docs: { module: DEFAULT_OUTLINE },      // 每种图各自记住输入
+    styles: { module: defaultStyle('module') },
+    poses: { module: {} },
+    outline: DEFAULT_OUTLINE,               // 当前图种输入的镜像
+    style: defaultStyle('module'),
+    positions: {},
+    view: { scale: 0.9, tx: 0, ty: 0 },
+    projectId: null,
+    projectName: '',
+    tree: null,
+    dropped: 0
+  };
+
+  const $ = (sel) => document.querySelector(sel);
+  const stage = $('#stage');
+  const viewport = $('#viewport');
+  const outlineEl = $('#outline');
+  const measureCanvas = document.createElement('canvas');
+  const measureCtx = measureCanvas.getContext('2d');
+
+  let saveTimer = null;
+  let renderRaf = null;
+  let dragState = null;
+  let panState = null;
+  const undoStack = [];
+
+  const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
+  const escHtml = (s) => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const escXml = escHtml;
+  const round = (n) => Math.round(n * 100) / 100;
+  const fontOf = () => FONTS[state.style.font] || FONTS['黑体'];
+
+  /* ================= 解析大纲 ================= */
+  function parseOutline(text){
+    const raw = String(text).replace(/\t/g, '  ').split(/\r?\n/);
+    const items = [];
+    for (const line of raw){
+      if (!line.trim()) continue;
+      const indent = (line.match(/^ */) || [''])[0].length;
+      items.push({ indent, name: line.trim() });
+    }
+    if (!items.length) throw new Error('请先输入系统名称和功能结构');
+
+    let uid = 0;
+    const root = { id:'n' + (uid++), name: items[0].name, depth:0, children:[], parent:null };
+    const stack = [{ indent: items[0].indent, node: root }];
+    let dropped = 0;
+
+    for (let i = 1; i < items.length; i++){
+      const it = items[i];
+      while (stack.length > 1 && it.indent <= stack[stack.length - 1].indent) stack.pop();
+      const parent = stack[stack.length - 1].node;
+      if (parent.depth >= MAX_DEPTH){ dropped++; continue; }
+      const node = { id:'n' + (uid++), name: it.name, depth: parent.depth + 1, children:[], parent };
+      parent.children.push(node);
+      stack.push({ indent: it.indent, node });
+    }
+    return { root, dropped };
+  }
+
+  function countStats(root){
+    let modules = root.children.length;
+    let funcs = 0;
+    (function walk(n){
+      if (n !== root && !n.children.length) funcs++;
+      n.children.forEach(walk);
+    })(root);
+    return { modules, funcs };
+  }
+
+  function updateStats(){
+    const def = DIAGRAMS[state.type];
+    let pairs;
+    try{ pairs = def.stats(state.docs[state.type] || ''); }
+    catch(e){ pairs = def.statLabels.map(l => [l, 0]); }
+    $('#paneFoot').innerHTML = pairs.map(p => '<span>' + escHtml(p[0]) + ' <b>' + p[1] + '</b></span>').join('');
+  }
+
+  /* ================= 尺寸测量与布局 ================= */
+  function measureText(text, size){
+    measureCtx.font = size + 'px ' + fontOf();
+    return measureCtx.measureText(text).width;
+  }
+
+  function wrapText(text, maxWidth, size){
+    const chars = Array.from(text);
+    const lines = [];
+    let cur = '';
+    for (const ch of chars){
+      if (!cur && measureText(ch, size) > maxWidth){ lines.push(ch); continue; }
+      const next = cur + ch;
+      if (cur && measureText(next, size) > maxWidth){
+        lines.push(cur);
+        cur = ch;
+      }else{
+        cur = next;
+      }
+    }
+    if (cur) lines.push(cur);
+    return lines.length ? lines : [''];
+  }
+
+  function measureNode(node, style){
+    const size = style.fontSize;
+    if (node.depth === 0){
+      const lines = wrapText(node.name, 420, size);
+      node.lines = lines;
+      node.h = Math.max(56, lines.length * size * 1.28 + 24);
+      const maxW = Math.max.apply(null, lines.map(l => measureText(l, size)));
+      node.w = Math.max(200, maxW + 64);
+      node.isLeaf = false;
+      node.textSize = size;
+    }else if (!node.children.length){
+      const chars = Array.from(node.name || '');
+      node.chars = chars;
+      node.isLeaf = true;
+      node.textSize = Math.max(12, size - 1);
+      node.w = Math.round(node.textSize + 34);
+      node.h = Math.round(52 + chars.length * node.textSize * 1.62);
+    }else{
+      const lines = wrapText(node.name, 260, size);
+      node.lines = lines;
+      node.h = Math.max(58, lines.length * size * 1.28 + 26);
+      const maxW = Math.max.apply(null, lines.map(l => measureText(l, size)));
+      node.w = Math.max(120, maxW + 52);
+      node.isLeaf = false;
+      node.textSize = size;
+    }
+    node.children.forEach(c => measureNode(c, style));
+  }
+
+  function layoutTree(root, style){
+    const PAD = 64;
+    const nodes = [];
+    (function collect(n){ nodes.push(n); n.children.forEach(collect); })(root);
+
+    const maxHByDepth = {};
+    nodes.forEach(n => { maxHByDepth[n.depth] = Math.max(maxHByDepth[n.depth] || 0, n.h); });
+    const depths = Object.keys(maxHByDepth).map(Number).sort((a,b) => a - b);
+    const yOf = {};
+    let cursorY = PAD;
+    depths.forEach(d => { yOf[d] = cursorY; cursorY += maxHByDepth[d] + style.levelGap; });
+
+    (function calc(n){
+      if (!n.children.length){ n.subW = n.w; n.totalChildrenW = 0; return n.subW; }
+      let total = 0;
+      n.children.forEach((c, i) => { total += calc(c) + (i ? style.nodeGap : 0); });
+      n.totalChildrenW = total;
+      n.subW = Math.max(n.w, total);
+      return n.subW;
+    })(root);
+
+    (function place(n, left){
+      n.x = left + (n.subW - n.w) / 2;
+      n.y = yOf[n.depth];
+      if (n.children.length){
+        let cur = left + (n.subW - n.totalChildrenW) / 2;
+        n.children.forEach(c => { place(c, cur); cur += c.subW + style.nodeGap; });
+      }
+    })(root, PAD);
+
+    nodes.forEach(n => {
+      const off = state.positions[n.id];
+      if (off){
+        n.x = Math.max(8, n.x + (off.dx || 0));
+        n.y = Math.max(8, n.y + (off.dy || 0));
+      }
+    });
+
+    let maxRight = 0, maxBottom = 0;
+    nodes.forEach(n => {
+      maxRight = Math.max(maxRight, n.x + n.w);
+      maxBottom = Math.max(maxBottom, n.y + n.h);
+    });
+
+    const W = Math.max(maxRight + PAD, 640);
+    const H = Math.max(maxBottom + PAD, 480);
+    return { nodes, root, W, H, depths, maxHByDepth };
+  }
+
+  /* ================= 渲染调度 ================= */
+  function render(fit){
+    const def = DIAGRAMS[state.type];
+    let res;
+    try{
+      res = def.render(state.docs[state.type] || '', state.style);
+      if (!res || !res.parts) throw new Error('内容无法解析');
+    }catch(e){
+      stage.innerHTML = '';
+      state.tree = null;
+      updateStats();
+      return false;
+    }
+    const { W, H, parts } = res;
+    stage.innerHTML = parts.join('');
+    stage.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    stage.setAttribute('width', W);
+    stage.setAttribute('height', H);
+    state.tree = { W, H };
+    bindNodeDrag();
+    updateStats();
+    if (isBare()){
+      stage.style.transform = 'none';
+    }else{
+      applyView();
+      if (fit) fitView();
+    }
+    return true;
+  }
+
+  function bindNodeDrag(){
+    stage.querySelectorAll('g[data-id]').forEach(g => {
+      g.addEventListener('pointerdown', startNodeDrag);
+    });
+  }
+
+  /* 功能模块图：解析 → 布局 → 生成 SVG 片段 */
+  function renderModule(text, style){
+    const parsed = parseOutline(text);
+    state.dropped = parsed.dropped;
+    measureNode(parsed.root, style);
+    const layout = layoutTree(parsed.root, style);
+    const { nodes, root, W, H } = layout;
+    const parts = [];
+    parts.push('<rect x="0" y="0" width="' + W + '" height="' + H + '" fill="#ffffff"/>');
+
+    // 箭头 marker
+    if (style.arrow !== '无箭头'){
+      const solid = style.arrow === '实心箭头';
+      parts.push(
+        '<defs><marker id="arrowHead" markerWidth="12" markerHeight="12" refX="10" refY="6" ' +
+        'orient="auto" markerUnits="userSpaceOnUse">' +
+        '<path d="M 0 0 L 12 6 L 0 12 Z" fill="' + (solid ? '#111111' : '#ffffff') + '" ' +
+        'stroke="#111111" stroke-width="' + (solid ? 0 : 1.2) + '"/></marker></defs>'
+      );
+    }
+
+    // 连线（先画，压在下层）
+    const linkStroke = style.lineWidth;
+    nodes.forEach(n => {
+      if (!n.parent) return;
+      const p = n.parent;
+      const x1 = p.x + p.w / 2;
+      const y1 = p.y + p.h;
+      const x2 = n.x + n.w / 2;
+      const y2 = n.y;
+      let d;
+      if (Math.abs(x1 - x2) < 0.5){
+        d = 'M ' + round(x1) + ' ' + round(y1) + ' V ' + round(y2);
+      }else{
+        const midY = (y1 + y2) / 2;
+        d = 'M ' + round(x1) + ' ' + round(y1) +
+            ' V ' + round(midY) +
+            ' H ' + round(x2) +
+            ' V ' + round(y2);
+      }
+      parts.push(
+        '<path d="' + d + '" fill="none" stroke="#111111" stroke-width="' + linkStroke + '" ' +
+        (style.arrow === '无箭头' ? '' : 'marker-end="url(#arrowHead)" ') + '/>'
+      );
+    });
+
+    // 节点
+    nodes.forEach(n => {
+      const cx = n.x + n.w / 2;
+      const boxStroke = n.depth === 0 ? 1.8 : (n.isLeaf ? 1.6 : 1.7);
+      parts.push('<g class="node" data-id="' + n.id + '">');
+      parts.push('<rect x="' + round(n.x) + '" y="' + round(n.y) + '" width="' + round(n.w) + '" height="' + round(n.h) +
+        '" fill="#ffffff" stroke="#111111" stroke-width="' + boxStroke + '"/>');
+
+      const fontAttr = fontOf();
+      const weight = n.depth === 0 ? 600 : 500;
+      const size = n.textSize;
+
+      if (n.isLeaf){
+        const chars = n.chars;
+        const gap = Math.min((n.h - 36) / Math.max(chars.length, 1), size * 1.62);
+        const startY = n.y + n.h / 2 - (chars.length - 1) * gap / 2;
+        chars.forEach((ch, i) => {
+          parts.push('<text x="' + round(cx) + '" y="' + round(startY + i * gap) + '" text-anchor="middle" ' +
+            'dominant-baseline="middle" font-family="' + fontAttr + '" font-size="' + size + '" font-weight="' + weight +
+            '" fill="#111111">' + escHtml(ch) + '</text>');
+        });
+      }else{
+        const lines = n.lines || [n.name];
+        const lh = size * 1.28;
+        const startY = n.y + n.h / 2 - (lines.length - 1) * lh / 2;
+        parts.push('<text x="' + round(cx) + '" text-anchor="middle" font-family="' + fontAttr + '" font-size="' + size +
+          '" font-weight="' + weight + '" fill="#111111">');
+        lines.forEach((ln, i) => {
+          parts.push('<tspan x="' + round(cx) + '" y="' + round(startY + i * lh) + '" dominant-baseline="middle">' + escHtml(ln) + '</tspan>');
+        });
+        parts.push('</text>');
+      }
+      parts.push('</g>');
+    });
+
+    return { W, H, parts };
+  }
+
+  /* ================= 通用绘制工具 ================= */
+  function tw(s, size){ return measureText(String(s == null ? '' : s), size); }
+
+  function svgText(x, y, s, opt){
+    opt = opt || {};
+    return '<text x="' + round(x) + '" y="' + round(y) + '" font-family="' + fontOf() +
+      '" font-size="' + (opt.size || 13) + '" fill="' + (opt.fill || '#111111') + '"' +
+      (opt.weight ? ' font-weight="' + opt.weight + '"' : '') +
+      (opt.anchor ? ' text-anchor="' + opt.anchor + '"' : '') +
+      (opt.italic ? ' font-style="italic"' : '') +
+      (opt.underline ? ' text-decoration="underline"' : '') +
+      ' dominant-baseline="middle">' + escHtml(s) + '</text>';
+  }
+
+  function markerDef(id, kind){
+    const C = '#111111';
+    if (kind === 'arrow') return '<marker id="' + id + '" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto" markerUnits="userSpaceOnUse"><path d="M0 0L10 5L0 10Z" fill="' + C + '"/></marker>';
+    if (kind === 'open') return '<marker id="' + id + '" markerWidth="11" markerHeight="11" refX="10" refY="5.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M1 1L10 5.5L1 10" fill="none" stroke="' + C + '" stroke-width="1.5"/></marker>';
+    if (kind === 'triangle') return '<marker id="' + id + '" markerWidth="16" markerHeight="16" refX="15" refY="8" orient="auto" markerUnits="userSpaceOnUse"><path d="M1 1L15 8L1 15Z" fill="#ffffff" stroke="' + C + '" stroke-width="1.3"/></marker>';
+    if (kind === 'diamond') return '<marker id="' + id + '" markerWidth="19" markerHeight="15" refX="18" refY="7.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M1 7.5L9.5 1L18 7.5L9.5 14Z" fill="#ffffff" stroke="' + C + '" stroke-width="1.3"/></marker>';
+    if (kind === 'diamondSolid') return '<marker id="' + id + '" markerWidth="19" markerHeight="15" refX="18" refY="7.5" orient="auto" markerUnits="userSpaceOnUse"><path d="M1 7.5L9.5 1L18 7.5L9.5 14Z" fill="' + C + '" stroke="' + C + '" stroke-width="1.2"/></marker>';
+    return '';
+  }
+
+  function offs(id){
+    const o = state.positions[id];
+    return { dx: (o && o.dx) || 0, dy: (o && o.dy) || 0 };
+  }
+
+  function group(id, inner){ return '<g class="node" data-id="' + id + '">' + inner + '</g>'; }
+
+  function wrapLines(text, maxW, size){
+    return wrapText(String(text || ''), maxW, size);
+  }
+
+  /* ================= 流程图 ================= */
+  const FLOW_TYPES = ['开始', '结束', '处理', '判断', '输入', '输出', '异常'];
+
+  function parseFlow(text){
+    const lines = String(text).replace(/\t/g, '  ').split(/\r?\n/);
+    const nodes = [];
+    let cur = null;
+    for (const raw of lines){
+      if (!raw.trim()) continue;
+      const s = raw.trim();
+      if (/^\s/.test(raw) && cur){
+        const bm = s.match(/^(.+?)\s*-\s*(\d+)$/);
+        if (bm){ cur.branches.push({ label: bm[1].trim(), target: Number(bm[2]) }); continue; }
+      }
+      const i1 = s.indexOf('-');
+      const i2 = i1 < 0 ? -1 : s.indexOf('-', i1 + 1);
+      if (i1 < 0 || i2 < 0) continue;
+      const seq = parseInt(s.slice(0, i1).trim(), 10);
+      if (isNaN(seq)) continue;
+      let type = s.slice(i1 + 1, i2).trim();
+      if (FLOW_TYPES.indexOf(type) < 0) type = '处理';
+      let rest = s.slice(i2 + 1).trim();
+      let jump = null;
+      const jm = rest.match(/->\s*(\d+)\s*$/);
+      if (jm){ jump = Number(jm[1]); rest = rest.slice(0, jm.index).trim(); }
+      cur = { id: 'f' + seq, seq: seq, type: type, text: rest, branches: [], jump: jump };
+      nodes.push(cur);
+    }
+    if (!nodes.length) throw new Error('请按「序号-类型-文本」输入节点');
+    return nodes;
+  }
+
+  function flowShape(n, size){
+    const x = round(n.x), y = round(n.y), w = round(n.w), h = round(n.h);
+    const S = 'fill="#ffffff" stroke="#111111" stroke-width="1.45"';
+    if (n.type === '开始' || n.type === '结束')
+      return '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="' + (n.h / 2) + '" ' + S + '/>';
+    if (n.type === '输入' || n.type === '输出'){
+      const k = Math.min(22, n.w * 0.16);
+      return '<polygon points="' + (x + k) + ',' + y + ' ' + (x + w) + ',' + y + ' ' + (x + w - k) + ',' + (y + h) + ' ' + x + ',' + (y + h) + '" ' + S + '/>';
+    }
+    if (n.type === '判断')
+      return '<polygon points="' + (x + w / 2) + ',' + y + ' ' + (x + w) + ',' + (y + h / 2) + ' ' + (x + w / 2) + ',' + (y + h) + ' ' + x + ',' + (y + h / 2) + '" ' + S + '/>';
+    if (n.type === '异常')
+      return '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="6" fill="#ffffff" stroke="#111111" stroke-width="1.45" stroke-dasharray="6 4"/>';
+    return '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="3" ' + S + '/>';
+  }
+
+  function renderFlow(text, style){
+    const nodes = parseFlow(text);
+    const size = style.fontSize;
+    const COL = 360;
+    let y = 52;
+    nodes.forEach(n => {
+      const w0 = tw(n.text, size);
+      if (n.type === '开始' || n.type === '结束'){ n.w = Math.max(120, w0 + 54); n.h = 50; }
+      else if (n.type === '判断'){ n.w = Math.max(196, w0 + 84); n.h = 80; }
+      else { n.w = Math.max(146, w0 + 56); n.h = 50; }
+      n.x = COL - n.w / 2;
+      n.y = y;
+      const o = offs(n.id);
+      n.x += o.dx; n.y += o.dy;
+      y += n.h + 66;
+    });
+
+    const bySeq = {};
+    nodes.forEach(n => { bySeq[n.seq] = n; });
+    const parts = ['<rect x="0" y="0" width="100%" height="100%" fill="#ffffff"/>'];
+    parts.push('<defs>' + markerDef('flow-arrow', 'arrow') + '</defs>');
+
+    const labels = [];
+    let minX = 30, maxX = 0;
+    nodes.forEach((n, i) => {
+      let outs = [];
+      if (n.jump != null) outs = [{ target: n.jump, label: '' }];
+      else if (n.branches.length) outs = n.branches.map(b => ({ target: b.target, label: b.label }));
+      else if (i < nodes.length - 1) outs = [{ target: nodes[i + 1].seq, label: '' }];
+
+      outs.forEach((o, k) => {
+        const t = bySeq[o.target];
+        if (!t || t === n) return;
+        const sameCol = Math.abs((t.x + t.w / 2) - (n.x + n.w / 2)) < 1;
+        if (sameCol && t.y > n.y){
+          const sx = n.x + n.w / 2, sy = n.y + n.h, ey = t.y;
+          parts.push('<path d="M ' + round(sx) + ' ' + round(sy) + ' V ' + round(ey) + '" stroke="#111111" stroke-width="1.45" fill="none" marker-end="url(#flow-arrow)"/>');
+          if (o.label) labels.push(svgText(sx + 10, (sy + ey) / 2, o.label, { size: size - 2, anchor: 'start', fill: '#333333' }));
+        }else{
+          const dir = k % 2 === 0 ? -1 : 1;
+          let laneX = dir < 0 ? Math.min(n.x, t.x) - 74 - k * 20 : Math.max(n.x + n.w, t.x + t.w) + 74 + k * 20;
+          laneX = Math.max(26, laneX);
+          minX = Math.min(minX, laneX); maxX = Math.max(maxX, laneX);
+          const sx = dir < 0 ? n.x : n.x + n.w;
+          const ex = dir < 0 ? t.x : t.x + t.w;
+          const sy = n.y + n.h / 2;
+          const ey = t.y + t.h / 2;
+          const d = 'M ' + round(sx) + ' ' + round(sy) + ' H ' + round(laneX) + ' V ' + round(ey) + ' H ' + round(ex);
+          parts.push('<path d="' + d + '" stroke="#111111" stroke-width="1.45" fill="none" marker-end="url(#flow-arrow)"/>');
+          if (o.label) labels.push(svgText(laneX + (dir < 0 ? 8 : -8), sy - 12, o.label, { size: size - 2, anchor: dir < 0 ? 'start' : 'end', fill: '#333333' }));
+        }
+      });
+    });
+
+    nodes.forEach(n => {
+      const lines = wrapLines(n.text, Math.max(200, n.w - 46), size);
+      const lh = size * 1.4;
+      const cy = n.y + n.h / 2 - (lines.length - 1) * lh / 2;
+      let inner = flowShape(n, size);
+      lines.forEach((ln, i) => { inner += svgText(n.x + n.w / 2, cy + i * lh, ln, { size: size, anchor: 'middle' }); });
+      parts.push(group(n.id, inner));
+    });
+    parts.push(labels.join(''));
+
+    let right = 0, bottom = 0;
+    nodes.forEach(n => { right = Math.max(right, n.x + n.w); bottom = Math.max(bottom, n.y + n.h); });
+    const W = Math.max(right, maxX) + 80;
+    const H = bottom + 80;
+    return { W: Math.max(W, 420), H: H, parts: parts };
+  }
+
+  /* ================= 用例图 ================= */
+  function parseUsecase(text){
+    const lines = String(text).replace(/\t/g, '  ').split(/\r?\n/);
+    const actors = [];
+    let actor = null, lastUse = null, uid = 0;
+    for (const raw of lines){
+      if (!raw.trim()) continue;
+      const indent = (raw.match(/^ */) || [''])[0].length;
+      const s = raw.trim();
+      if (indent === 0){
+        const name = s.replace(/^角色\s*[:：]\s*/, '').trim();
+        if (!name) continue;
+        actor = actors.find(a => a.name === name);
+        if (!actor){ actor = { id: 'a' + actors.length, name: name, uses: [] }; actors.push(actor); }
+        lastUse = null;
+      }else{
+        if (!actor){ actor = { id: 'a0', name: '用户', uses: [] }; actors.push(actor); }
+        let name = s, rel = '';
+        if (/^<i>/i.test(name)){ name = name.replace(/^<i>\s*/i, ''); rel = 'include'; }
+        else if (/^<e>/i.test(name)){ name = name.replace(/^<e>\s*/i, ''); rel = 'extend'; }
+        const use = { id: 'u' + (uid++), name: name, rel: rel, parent: rel ? lastUse : null, kids: [] };
+        if (rel && lastUse) lastUse.kids.push(use);
+        else { actor.uses.push(use); lastUse = use; }
+      }
+    }
+    if (!actors.length) throw new Error('请先输入角色和用例');
+    return actors;
+  }
+
+  function actorShape(cx, cy){
+    return '<circle cx="' + round(cx) + '" cy="' + round(cy) + '" r="12" fill="#ffffff" stroke="#111111" stroke-width="1.5"/>' +
+      '<path d="M ' + round(cx) + ' ' + round(cy + 12) + ' V ' + round(cy + 38) +
+      ' M ' + round(cx - 17) + ' ' + round(cy + 22) + ' H ' + round(cx + 17) +
+      ' M ' + round(cx) + ' ' + round(cy + 38) + ' L ' + round(cx - 14) + ' ' + round(cy + 58) +
+      ' M ' + round(cx) + ' ' + round(cy + 38) + ' L ' + round(cx + 14) + ' ' + round(cy + 58) +
+      '" stroke="#111111" stroke-width="1.5" fill="none" stroke-linecap="round"/>';
+  }
+
+  function renderUsecase(text, style){
+    const actors = parseUsecase(text);
+    const size = style.fontSize;
+    const parts = ['<defs>' + markerDef('uc-open', 'open') + '</defs>'];
+    let cursor = 84;
+
+    actors.forEach(a => {
+      a.uses.forEach(u => {
+        const w = tw(u.name, size) + 46;
+        u.cx = 360; u.cy = cursor + 34; u.rx = Math.max(62, w / 2); u.ry = 22;
+        u.x = u.cx - u.rx; u.y = u.cy - u.ry;
+        const o = offs(u.id);
+        u.cx += o.dx; u.cy += o.dy;
+        cursor += 96;
+        let kidY = u.cy - (u.kids.length - 1) * 30;
+        u.kids.forEach(k => {
+          const kw = tw(k.name, size - 1) + 40;
+          k.cx = 640; k.cy = kidY; k.rx = Math.max(58, kw / 2); k.ry = 20;
+          const ko = offs(k.id);
+          k.cx += ko.dx; k.cy += ko.dy;
+          const head = 26 + k.kids.length * 56;
+          kidY += Math.max(58, head);
+          cursor = Math.max(cursor, k.cy + 40);
+        });
+      });
+      a.cy = a.uses.length ? (a.uses[0].cy + a.uses[a.uses.length - 1].cy) / 2 : cursor;
+      const ao = offs(a.id);
+      a.cy += ao.dy;
+      a.cx = 96 + ao.dx;
+    });
+
+    // 关联线
+    actors.forEach(a => {
+      const ends = a.uses.concat.apply(a.uses, a.uses.map(u => u.kids));
+      ends.forEach(u => {
+        const sx = a.cx + 18, sy = a.cy;
+        const ex = u.cx - u.rx, ey = u.cy;
+        const mid = (sx + ex) / 2;
+        parts.push('<path d="M ' + round(sx) + ' ' + round(sy) + ' C ' + round(mid) + ' ' + round(sy) + ', ' + round(mid) + ' ' + round(ey) + ', ' + round(ex) + ' ' + round(ey) + '" stroke="#111111" stroke-width="1.35" fill="none" marker-end="url(#uc-open)"/>');
+      });
+      a.uses.forEach(u => {
+        u.kids.forEach(k => {
+          const isInc = k.rel === 'include';
+          const from = isInc ? u : k, to = isInc ? k : u;
+          parts.push('<path d="M ' + round(from.cx + from.rx) + ' ' + round(from.cy) + ' L ' + round(to.cx - to.rx) + ' ' + round(to.cy) + '" stroke="#111111" stroke-width="1.3" fill="none" stroke-dasharray="6 4" marker-end="url(#uc-open)"/>');
+          parts.push(svgText((from.cx + to.cx) / 2, (from.cy + to.cy) / 2 - 12, isInc ? '«include»' : '«extend»', { size: size - 4, anchor: 'middle', fill: '#555555' }));
+        });
+      });
+    });
+
+    // 参与者
+    actors.forEach(a => {
+      parts.push(group(a.id, actorShape(a.cx, a.cy - 34) + svgText(a.cx, a.cy + 24, a.name, { size: size, anchor: 'middle', weight: 500 })));
+    });
+
+    // 用例
+    actors.forEach(a => {
+      const all = a.uses.concat.apply(a.uses, a.uses.map(u => u.kids));
+      all.forEach(u => {
+        parts.push(group(u.id,
+          '<ellipse cx="' + round(u.cx) + '" cy="' + round(u.cy) + '" rx="' + round(u.rx) + '" ry="' + round(u.ry) + '" fill="#ffffff" stroke="#111111" stroke-width="1.4"/>' +
+          svgText(u.cx, u.cy, u.name, { size: u.rx > 62 ? size : size - 1, anchor: 'middle' })));
+      });
+    });
+
+    let right = 0, bottom = 0;
+    actors.forEach(a => {
+      right = Math.max(right, a.cx + 60);
+      bottom = Math.max(bottom, a.cy + 50);
+      a.uses.forEach(u => { right = Math.max(right, u.cx + u.rx); bottom = Math.max(bottom, u.cy + u.ry); u.kids.forEach(k => { right = Math.max(right, k.cx + k.rx); bottom = Math.max(bottom, k.cy + k.ry); }); });
+    });
+    return { W: Math.max(720, right + 90), H: Math.max(420, bottom + 80), parts: parts };
+  }
+
+  /* ================= 系统架构图 ================= */
+  function parseArch(text){
+    const lines = String(text).replace(/\t/g, '  ').split(/\r?\n/);
+    const layers = [];
+    let layer = null, node = null;
+    for (const raw of lines){
+      if (!raw.trim()) continue;
+      const indent = (raw.match(/^ */) || [''])[0].length;
+      const s = raw.trim();
+      if (indent <= 1){ layer = { id: 'L' + layers.length, name: s, nodes: [] }; layers.push(layer); node = null; }
+      else if (indent <= 3){ if (!layer) continue; node = { name: s, details: [] }; layer.nodes.push(node); }
+      else if (node){ node.details.push(s); }
+    }
+    if (!layers.length) throw new Error('请先输入架构层级');
+    return layers;
+  }
+
+  function renderArch(text, style){
+    const layers = parseArch(text);
+    const size = style.fontSize;
+    const TITLE_W = 190, PAD = 26, NODE_GAP = 22;
+    const isCross = (l) => /横切|公共/.test(l.name);
+
+    let maxContentW = 0;
+    layers.forEach(l => {
+      l.nodes.forEach(n => {
+        const detailW = n.details.length ? Math.max.apply(null, n.details.map(d => tw(d, size - 3))) : 0;
+        n.w = Math.max(176, tw(n.name, size) + 44, detailW + 40);
+        n.h = 54 + n.details.length * (size + 5);
+      });
+      l.contentW = l.nodes.reduce((a, n) => a + n.w, 0) + Math.max(0, l.nodes.length - 1) * NODE_GAP;
+      l.h = Math.max(112, l.nodes.reduce((a, n) => Math.max(a, n.h), 0) + 44);
+      maxContentW = Math.max(maxContentW, l.contentW);
+    });
+
+    const bandW = TITLE_W + PAD * 2 + maxContentW;
+    const parts = [];
+    let y = 46;
+    layers.forEach(l => {
+      const cross = isCross(l);
+      const o = offs(l.id);
+      const by = y + o.dy;
+      parts.push('<rect x="24" y="' + round(by) + '" width="' + round(bandW) + '" height="' + round(l.h) +
+        '" rx="4" fill="' + (cross ? '#fcfcfd' : '#ffffff') + '" stroke="#111111" stroke-width="1.4"' +
+        (cross ? ' stroke-dasharray="7 5"' : '') + '/>');
+      parts.push(svgText(24 + TITLE_W / 2, by + l.h / 2, l.name, { size: size + 1, anchor: 'middle', weight: 600 }));
+      parts.push('<path d="M ' + (24 + TITLE_W) + ' ' + round(by + 16) + ' V ' + round(by + l.h - 16) + '" stroke="#111111" stroke-width="1.2"/>');
+
+      let nx = 24 + TITLE_W + PAD;
+      l.nodes.forEach((n, i) => {
+        const no = offs(l.id + '_' + i);
+        const x = nx + no.dx;
+        const ny = by + (l.h - n.h) / 2 + no.dy;
+        n.x = x; n.y = ny;
+        let inner = '<rect x="' + round(x) + '" y="' + round(ny) + '" width="' + round(n.w) + '" height="' + round(n.h) +
+          '" rx="3" fill="#ffffff" stroke="#111111" stroke-width="1.35"/>' +
+          svgText(x + n.w / 2, ny + 22, n.name, { size: size, anchor: 'middle', weight: 500 });
+        n.details.forEach((d, di) => {
+          inner += svgText(x + n.w / 2, ny + 42 + di * (size + 5), d, { size: size - 3, anchor: 'middle', fill: '#444444' });
+        });
+        parts.push(group(l.id + '_' + i, inner));
+        nx += n.w + NODE_GAP;
+      });
+      y = by + l.h + 20;
+    });
+
+    const H = y + 40;
+    return { W: Math.max(760, bandW + 60), H: H, parts: parts };
+  }
+
+  /* ================= 时序图 ================= */
+  function parseSequence(text){
+    const lines = String(text).replace(/\t/g, '  ').split(/\r?\n/);
+    let title = '';
+    const actors = [], messages = [];
+    for (const raw of lines){
+      if (!raw.trim()) continue;
+      const s = raw.trim();
+      const tm = s.match(/^(?:标题|title)\s*[:：]\s*(.+)$/i);
+      if (tm){ title = tm[1].trim(); continue; }
+      if (/^(alt|else|end|opt|loop)\b/i.test(s)) continue;
+      const mm = s.match(/^(.+?)\s*(-->|->)\s*(.+?)\s*[:：]\s*(.*)$/);
+      if (mm){
+        messages.push({ from: mm[1].trim(), to: mm[3].trim(), text: mm[4].trim(), ret: mm[2] === '-->' });
+        continue;
+      }
+      if (/^角色\s+/.test(s)){
+        const name = s.replace(/^角色\s+/, '').trim();
+        if (name && !actors.find(a => a.name === name)) actors.push({ name: name, actor: true });
+      }else{
+        const name = s.replace(/^(?:参与者|participant)\s*[:：]\s*/i, '').trim();
+        if (name && !actors.find(a => a.name === name)) actors.push({ name: name, actor: false });
+      }
+    }
+    messages.forEach(m => {
+      if (!actors.find(a => a.name === m.from)) actors.push({ name: m.from, actor: false });
+      if (!actors.find(a => a.name === m.to)) actors.push({ name: m.to, actor: false });
+    });
+    if (!actors.length) throw new Error('请先输入参与者');
+    return { title: title, actors: actors, messages: messages };
+  }
+
+  function renderSequence(text, style){
+    const { title, actors, messages } = parseSequence(text);
+    const size = style.fontSize;
+    const parts = ['<defs>' + markerDef('seq-arrow', 'arrow') + markerDef('seq-open', 'open') + '</defs>'];
+    const headW = 116, headH = 42, gap = 58;
+    let x = 60;
+    actors.forEach(a => {
+      a.w = Math.max(headW, tw(a.name, size) + 40);
+      a.cx = x + a.w / 2;
+      const o = offs('sq_' + a.name);
+      a.cx += o.dx;
+      x += a.w + gap;
+    });
+
+    const headY = 74;
+    const msgStart = headY + headH + 56;
+    const step = 46;
+    const bottomY = msgStart + Math.max(1, messages.length) * step + 20;
+
+    if (title) parts.push(svgText((60 + x - gap) / 2, 34, title, { size: size + 2, anchor: 'middle', weight: 600 }));
+
+    actors.forEach(a => {
+      const inner = a.actor
+        ? actorShape(a.cx, headY - 26) + svgText(a.cx, headY + 44, a.name, { size: size, anchor: 'middle' })
+        : '<rect x="' + round(a.cx - a.w / 2) + '" y="' + headY + '" width="' + round(a.w) + '" height="' + headH +
+          '" rx="2" fill="#ffffff" stroke="#111111" stroke-width="1.45"/>' +
+          svgText(a.cx, headY + headH / 2, a.name, { size: size, anchor: 'middle' });
+      parts.push(group('sq_' + a.name, inner));
+      parts.push('<path d="M ' + round(a.cx) + ' ' + round(headY + (a.actor ? 56 : headH)) + ' V ' + round(bottomY) +
+        '" stroke="#111111" stroke-width="1.1" stroke-dasharray="6 6" fill="none"/>');
+    });
+
+    const byName = {};
+    actors.forEach(a => { byName[a.name] = a; });
+
+    messages.forEach((m, i) => {
+      const a = byName[m.from], b = byName[m.to];
+      if (!a || !b) return;
+      const y = msgStart + i * step;
+      const dir = b.cx > a.cx ? 1 : -1;
+      const x1 = a.cx + dir * 4;
+      const x2 = b.cx - dir * 6;
+      const stroke = m.ret ? 'stroke-dasharray="6 4"' : '';
+      parts.push('<path d="M ' + round(x1) + ' ' + round(y) + ' H ' + round(x2) + '" stroke="#111111" stroke-width="1.35" fill="none" ' + stroke +
+        ' marker-end="url(#' + (m.ret ? 'seq-open' : 'seq-arrow') + ')"/>');
+      if (m.text) parts.push(svgText((x1 + x2) / 2, y - 13, m.text, { size: size - 1, anchor: 'middle', fill: '#222222' }));
+      if (!m.ret){
+        parts.push('<rect x="' + round(b.cx - 4) + '" y="' + round(y) + '" width="8" height="30" fill="#ffffff" stroke="#111111" stroke-width="1.1"/>');
+      }
+    });
+
+    const W = Math.max(520, x - gap + 70);
+    return { W: W, H: bottomY + 60, parts: parts };
+  }
+
+  /* ================= UML 类图 ================= */
+  function parseRelEnd(s){
+    s = String(s).trim();
+    let m = s.match(/^(.+?)\s+"([^"]*)"$/);
+    if (m) return { name: m[1].trim(), mult: m[2] };
+    m = s.match(/^"([^"]*)"\s*(.+)$/);
+    if (m) return { name: m[2].trim(), mult: m[1] };
+    return { name: s, mult: '' };
+  }
+
+  const REL_SYMS = ['<|..', '<|--', '..|>', '--|>', '..>', '-->', '--o', 'o--', '--*', '*--', '..', '--'];
+  const REL_RE = new RegExp('^(.+?)\\s+(' + REL_SYMS.map(s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|') + ')\\s+(.+)$');
+
+  function parseRelation(s){
+    let body = String(s).trim(), label = '';
+    const ci = body.search(/[:：]/);
+    if (ci >= 0){ label = body.slice(ci + 1).trim(); body = body.slice(0, ci).trim(); }
+    const m = body.match(REL_RE);
+    if (!m) return null;
+    let sym = m[2];
+    if (sym === '..') sym = '..>';           // 裸虚线按依赖处理
+    if (sym === '--') sym = '-->';           // 裸实线按关联处理
+    const a = parseRelEnd(m[1]), b = parseRelEnd(m[3]);
+    if (!a.name || !b.name) return null;
+    return { from: a.name, to: b.name, m1: a.mult, m2: b.mult, sym: sym, label: label };
+  }
+
+  function parseUml(text){
+    const lines = String(text).replace(/\t/g, '  ').split(/\r?\n/);
+    let title = '';
+    const classes = [], rels = [];
+    let cur = null, section = '';
+    for (const raw of lines){
+      if (!raw.trim()) continue;
+      const s = raw.trim();
+      const tm = s.match(/^(?:title|标题)\s*[:：]\s*(.+)$/i);
+      if (tm){ title = tm[1].trim(); continue; }
+      if (/^(?:关系|relations?)\s*[:：]?\s*$/i.test(s)){ section = 'rel'; cur = null; continue; }
+      if (!/^[+\-#~]/.test(s)){
+        const r = parseRelation(s);
+        if (r){ rels.push(r); section = 'rel'; continue; }
+      }
+      const cm = s.match(/^(类|抽象类|接口|枚举)\s+(.+)$/);
+      if (cm){
+        cur = { id: 'c' + classes.length, kind: cm[1], name: cm[2].trim(), attrs: [], methods: [] };
+        classes.push(cur); section = 'body'; continue;
+      }
+      if (/^(属性|attributes?)\s*[:：]?\s*$/i.test(s)){ section = 'attr'; continue; }
+      if (/^(方法|methods?)\s*[:：]?\s*$/i.test(s)){ section = 'method'; continue; }
+      if (!cur) continue;
+      if (section === 'attr') cur.attrs.push(s);
+      else if (section === 'method') cur.methods.push(s);
+      else if (section === 'body') cur.attrs.push(s);
+    }
+    if (!classes.length) throw new Error('请先定义类');
+    return { title: title, classes: classes, rels: rels };
+  }
+
+  function borderPoint(b, tx, ty){
+    const cx = b.x + b.w / 2, cy = b.y + b.h / 2;
+    let dx = tx - cx, dy = ty - cy;
+    if (!dx && !dy) dy = 1;
+    const t = Math.min((b.w / 2) / Math.max(Math.abs(dx), 1e-6), (b.h / 2) / Math.max(Math.abs(dy), 1e-6));
+    return { x: cx + dx * t, y: cy + dy * t };
+  }
+
+  function renderUml(text, style){
+    const { title, classes, rels } = parseUml(text);
+    const size = style.fontSize;
+    const lh = size + 9;
+    const byName = {};
+    classes.forEach(c => { byName[c.name] = c; });
+
+    classes.forEach(c => {
+      const headExtra = (c.kind === '接口' || c.kind === '抽象类' || c.kind === '枚举') ? 8 : 0;
+      c.headH = 42 + headExtra;
+      c.attrH = Math.max(1, c.attrs.length) * lh + 10;
+      c.methodH = Math.max(1, c.methods.length) * lh + 10;
+      const widths = c.attrs.concat(c.methods).map(m => tw(m, size - 1));
+      const memberW = widths.length ? Math.max.apply(null, widths) : 0;
+      c.w = Math.max(176, tw(c.name, size + 1) + 48, memberW + 34);
+      c.h = c.headH + c.attrH + c.methodH;
+    });
+
+    const n = classes.length;
+    const cols = n <= 2 ? 1 : (n <= 4 ? 2 : 3);
+    const rows = Math.ceil(n / cols);
+    const colW = new Array(cols).fill(0), rowH = new Array(rows).fill(0);
+    classes.forEach((c, i) => {
+      const ci = i % cols, ri = Math.floor(i / cols);
+      colW[ci] = Math.max(colW[ci], c.w);
+      rowH[ri] = Math.max(rowH[ri], c.h);
+    });
+    let cxr = 70, cyr = 58;
+    const colX = [], rowY = [];
+    for (let ci = 0; ci < cols; ci++){ colX[ci] = cxr + colW[ci] / 2; cxr += colW[ci] + 130; }
+    for (let ri = 0; ri < rows; ri++){ rowY[ri] = cyr + rowH[ri] / 2; cyr += rowH[ri] + 96; }
+
+    classes.forEach((c, i) => {
+      const ci = i % cols, ri = Math.floor(i / cols);
+      const o = offs(c.id);
+      c.x = colX[ci] - c.w / 2 + o.dx;
+      c.y = rowY[ri] - c.h / 2 + o.dy;
+    });
+
+    const parts = ['<defs>' + markerDef('uml-open', 'open') + markerDef('uml-tri', 'triangle') +
+      markerDef('uml-dia', 'diamond') + markerDef('uml-dia-solid', 'diamondSolid') +
+      markerDef('uml-open-s', 'open').replace('orient="auto"', 'orient="auto-start-reverse"') +
+      markerDef('uml-tri-s', 'triangle').replace('orient="auto"', 'orient="auto-start-reverse"') +
+      markerDef('uml-dia-s', 'diamond').replace('orient="auto"', 'orient="auto-start-reverse"') +
+      markerDef('uml-dia-solid-s', 'diamondSolid').replace('orient="auto"', 'orient="auto-start-reverse"') +
+      '</defs>'];
+    if (title) parts.push(svgText(70, 30, title, { size: size + 3, anchor: 'start', weight: 600 }));
+
+    // 关系线
+    rels.forEach(r => {
+      const a = byName[r.from], b = byName[r.to];
+      if (!a || !b) return;
+      const ca = { x: a.x + a.w / 2, y: a.y + a.h / 2 };
+      const cb = { x: b.x + b.w / 2, y: b.y + b.h / 2 };
+      const p1 = borderPoint(a, cb.x, cb.y);
+      const p2 = borderPoint(b, ca.x, ca.y);
+      const dashed = r.sym.indexOf('..') === 0 || r.sym.indexOf('<|..') === 0;
+      let marker = 'uml-open', startMarker = '';
+      if (r.sym === '--|>' || r.sym === '..|>') marker = 'uml-tri';
+      if (r.sym === '<|--' || r.sym === '<|..') startMarker = 'uml-tri-s';
+      if (r.sym === '--o') marker = 'uml-dia';
+      if (r.sym === '--*') marker = 'uml-dia-solid';
+      if (r.sym === 'o--') startMarker = 'uml-dia-s';
+      if (r.sym === '*--') startMarker = 'uml-dia-solid-s';
+      const mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2;
+      parts.push('<path d="M ' + round(p1.x) + ' ' + round(p1.y) + ' L ' + round(p2.x) + ' ' + round(p2.y) +
+        '" stroke="#171717" stroke-width="1.35" fill="none"' + (dashed ? ' stroke-dasharray="6 5"' : '') +
+        ' marker-end="url(#' + marker + ')"' + (startMarker ? ' marker-start="url(#' + startMarker + ')"' : '') + '/>');
+      if (r.label){
+        const lw = tw(r.label, size - 2) + 14;
+        parts.push('<rect x="' + round(mx - lw / 2) + '" y="' + round(my - 11) + '" width="' + round(lw) + '" height="22" rx="2" fill="#ffffff"/>');
+        parts.push(svgText(mx, my, r.label, { size: size - 2, anchor: 'middle', fill: '#333333' }));
+      }
+      const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y) || 1;
+      const ex = (p2.x - p1.x) / dist, ey = (p2.y - p1.y) / dist;
+      if (r.m1) parts.push(svgText(p1.x + ex * 26, p1.y + ey * 26 - 10, r.m1, { size: size - 3, anchor: 'middle', fill: '#333333' }));
+      if (r.m2) parts.push(svgText(p2.x - ex * 26, p2.y - ey * 26 - 10, r.m2, { size: size - 3, anchor: 'middle', fill: '#333333' }));
+    });
+
+    // 类框
+    classes.forEach(c => {
+      let inner = '<rect x="' + round(c.x) + '" y="' + round(c.y) + '" width="' + round(c.w) + '" height="' + round(c.h) +
+        '" rx="2" fill="#ffffff" stroke="#171717" stroke-width="1.35"/>' +
+        '<rect x="' + round(c.x) + '" y="' + round(c.y) + '" width="' + round(c.w) + '" height="' + round(c.headH) +
+        '" rx="2" fill="#f5f5f5" stroke="#171717" stroke-width="1.35"/>';
+      if (c.kind === '接口' || c.kind === '抽象类' || c.kind === '枚举'){
+        const st = c.kind === '接口' ? '«interface»' : (c.kind === '枚举' ? '«enum»' : '«abstract»');
+        inner += svgText(c.x + c.w / 2, c.y + 15, st, { size: size - 4, anchor: 'middle', fill: '#555555' });
+        inner += svgText(c.x + c.w / 2, c.y + 33, c.name, { size: size + 1, anchor: 'middle', weight: 600, italic: c.kind === '抽象类' });
+      }else{
+        inner += svgText(c.x + c.w / 2, c.y + c.headH / 2, c.name, { size: size + 1, anchor: 'middle', weight: 600 });
+      }
+      inner += '<path d="M ' + round(c.x) + ' ' + round(c.y + c.headH) + ' H ' + round(c.x + c.w) + '" stroke="#171717" stroke-width="1.2"/>';
+      inner += '<path d="M ' + round(c.x) + ' ' + round(c.y + c.headH + c.attrH) + ' H ' + round(c.x + c.w) + '" stroke="#171717" stroke-width="1.2"/>';
+      if (c.attrs.length){
+        c.attrs.forEach((m, i) => { inner += svgText(c.x + 12, c.y + c.headH + 14 + i * lh, m, { size: size - 1, anchor: 'start' }); });
+      }else{
+        inner += svgText(c.x + c.w / 2, c.y + c.headH + c.attrH / 2, '（无属性）', { size: size - 3, anchor: 'middle', fill: '#999999' });
+      }
+      if (c.methods.length){
+        c.methods.forEach((m, i) => { inner += svgText(c.x + 12, c.y + c.headH + c.attrH + 14 + i * lh, m, { size: size - 1, anchor: 'start' }); });
+      }else{
+        inner += svgText(c.x + c.w / 2, c.y + c.headH + c.attrH + c.methodH / 2, '（无方法）', { size: size - 3, anchor: 'middle', fill: '#999999' });
+      }
+      parts.push(group(c.id, inner));
+    });
+
+    let right = 0, bottom = 0;
+    classes.forEach(c => { right = Math.max(right, c.x + c.w); bottom = Math.max(bottom, c.y + c.h); });
+    return { W: Math.max(700, right + 90), H: Math.max(420, bottom + 80), parts: parts };
+  }
+
+  /* ================= SQL / DBML 解析（ER 与三线表共用） ================= */
+  function splitTopLevel(body){
+    const out = [];
+    let depth = 0, cur = '', inQ = false, q = '';
+    for (const ch of body){
+      if (inQ){ cur += ch; if (ch === q) inQ = false; continue; }
+      if (ch === "'" || ch === '"' || ch === '`'){ inQ = true; q = ch; cur += ch; continue; }
+      if (ch === '(') depth++;
+      if (ch === ')') depth--;
+      if (ch === ',' && depth === 0){ out.push(cur); cur = ''; continue; }
+      cur += ch;
+    }
+    if (cur.trim()) out.push(cur);
+    return out;
+  }
+
+  function parseSql(text){
+    const src = String(text);
+    const tables = [], fks = [];
+    const re = /CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?[`"]?([\w$]+)[`"]?\s*\(/gi;
+    let m;
+    while ((m = re.exec(src))){
+      const name = m[1];
+      let i = re.lastIndex - 1;
+      if (src[i] !== '(') i = src.indexOf('(', m.index);
+      let depth = 0, inQ = false, q = '', body = '';
+      for (; i < src.length; i++){
+        const ch = src[i];
+        if (inQ){ body += ch; if (ch === q) inQ = false; continue; }
+        if (ch === "'" || ch === '"' || ch === '`'){ inQ = true; q = ch; body += ch; continue; }
+        if (ch === '('){ depth++; if (depth === 1) continue; }
+        if (ch === ')'){ depth--; if (depth === 0) break; }
+        body += ch;
+      }
+      const after = src.slice(i + 1, i + 400);
+      const tc = after.match(/COMMENT\s*=\s*'([^']*)'/i);
+      const t = { name: name, comment: tc ? tc[1] : '', fields: [] };
+      const pkLine = body.match(/PRIMARY\s+KEY\s*\(([^)]*)\)/i);
+      const pkNames = pkLine ? pkLine[1].split(',').map(s => s.replace(/[`"'\s]/g, '')) : [];
+      splitTopLevel(body).forEach(part => {
+        const p = part.trim();
+        if (!p) return;
+        const fk = p.match(/FOREIGN\s+KEY\s*\(([^)]*)\)\s*REFERENCES\s+[`"]?([\w$]+)[`"]?\s*\(([^)]*)\)/i);
+        if (fk){
+          fks.push({ from: name, to: fk[2], field: fk[1].replace(/[`"\s]/g, ''), toField: fk[3].replace(/[`"\s]/g, '') });
+          return;
+        }
+        if (/^(PRIMARY|UNIQUE|KEY|INDEX|CONSTRAINT|FULLTEXT|CHECK)\b/i.test(p)) return;
+        const fm = p.match(/^[`"]?([\w$]+)[`"]?\s+([A-Za-z]+)(?:\s*\(([^)]*)\))?([\s\S]*)$/);
+        if (!fm) return;
+        const rest = fm[4] || '';
+        const defM = rest.match(/\bDEFAULT\s+('(?:[^']*)'|[^\s,]+)/i);
+        const comM = rest.match(/\bCOMMENT\s+'([^']*)'/i);
+        const isAuto = /AUTO_INCREMENT/i.test(rest);
+        t.fields.push({
+          name: fm[1],
+          type: fm[2].toLowerCase(),
+          len: (fm[3] || '').replace(/\s/g, ''),
+          pk: pkNames.indexOf(fm[1]) >= 0,
+          nullable: !/NOT\s+NULL/i.test(rest),
+          def: isAuto ? 'AUTO_INCREMENT' : (defM ? defM[1].replace(/^'|'$/g, '') : 'NULL'),
+          comment: comM ? comM[1] : '',
+          auto: isAuto
+        });
+      });
+      tables.push(t);
+      re.lastIndex = i + 1;
+    }
+    return { tables: tables, fks: fks };
+  }
+
+  function parseDbml(text){
+    const src = String(text);
+    const tables = [], fks = [];
+    const re = /Table\s+([\w$]+)\s*\{([\s\S]*?)\}/g;
+    let m;
+    while ((m = re.exec(src))){
+      const t = { name: m[1], comment: '', fields: [] };
+      m[2].split(/\r?\n/).forEach(line => {
+        const s = line.trim();
+        if (!s || s.indexOf('//') === 0) return;
+        const fm = s.match(/^([\w$]+)\s+([A-Za-z]+)(?:\s*\(([^)]*)\))?([\s\S]*)$/);
+        if (!fm) return;
+        const rest = fm[4] || '';
+        const note = rest.match(/note\s*:\s*'([^']*)'/i);
+        const isPk = /\[[^\]]*\bpk\b[^\]]*\]/i.test(rest);
+        t.fields.push({ name: fm[1], type: fm[2].toLowerCase(), len: (fm[3] || '').replace(/\s/g, ''), pk: isPk, nullable: !/not\s+null/i.test(rest), def: 'NULL', comment: note ? note[1] : '', auto: false });
+      });
+      tables.push(t);
+    }
+    const relRe = /Ref\s*:\s*([\w$]+)\.([\w$]+)\s*[<>-]\s*([\w$]+)\.([\w$]+)/g;
+    while ((m = relRe.exec(src))) fks.push({ from: m[1], to: m[3], field: m[2], toField: m[4] });
+    return { tables: tables, fks: fks };
+  }
+
+  function parseSchema(text){
+    return /CREATE\s+TABLE/i.test(text) ? parseSql(text) : parseDbml(text);
+  }
+
+  function firstTitle(text, schema){
+    if (schema && schema.tables.length) return schema.tables[0].comment || schema.tables[0].name;
+    const lines = String(text).split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+    return lines[0] || '未命名图表';
+  }
+
+  /* ================= ER 属性图（Chen 记法） ================= */
+  function renderEr(text, style){
+    const schema = parseSchema(text);
+    if (!schema.tables.length) throw new Error('请粘贴 MySQL 建表语句或 DBML');
+    const size = style.fontSize;
+    const parts = [];
+    const entities = schema.tables;
+    const RING = [[-90, -45, 0, 45, 90, 135, 180, 225], [-70, -35, 0, 35, 70, 105, 140, 175, 210, 245, 280, 315]];
+
+    entities.forEach((e, i) => {
+      const label = e.comment || e.name;
+      e.w = Math.max(132, tw(label, size + 1) + 44);
+      e.h = 58;
+      e.rx = 200; e.ryR = 172;
+    });
+
+    const spacing = entities.reduce((a, e) => Math.max(a, e.w), 0) + 2 * 210 + 140;
+    entities.forEach((e, i) => {
+      e.cx = 260 + i * spacing;
+      e.cy = 360;
+      const o = offs('er_' + e.name);
+      e.cx += o.dx; e.cy += o.dy;
+    });
+
+    entities.forEach((e) => {
+      const inner = [];
+      const n = e.fields.length;
+      e.fields.forEach((f, fi) => {
+        const ringIdx = fi < 8 ? 0 : 1;
+        const ring = RING[ringIdx];
+        const slot = ringIdx === 0 ? fi : (fi - 8) % ring.length;
+        const ang = ring[slot] * Math.PI / 180;
+        const extra = ringIdx === 0 ? 0 : 120;
+        const rx = Math.max(56, tw(f.name, size - 1) / 2 + 18);
+        const fx = e.cx + Math.cos(ang) * (210 + extra);
+        const fy = e.cy + Math.sin(ang) * (178 + extra * 0.72);
+        f.cx = fx; f.cy = fy; f.rx = rx; f.ry = 21;
+        inner.push('<path d="M ' + round(e.cx) + ' ' + round(e.cy) + ' L ' + round(fx) + ' ' + round(fy) + '" stroke="#111111" stroke-width="1.15" fill="none"/>');
+        inner.push('<ellipse cx="' + round(fx) + '" cy="' + round(fy) + '" rx="' + round(rx) + '" ry="21" fill="#ffffff" stroke="#111111" stroke-width="1.35"/>');
+        inner.push(svgText(fx, fy, f.name, { size: size - 1, anchor: 'middle', underline: style.pkUnderline && f.pk }));
+      });
+      inner.push('<rect x="' + round(e.cx - e.w / 2) + '" y="' + round(e.cy - e.h / 2) + '" width="' + round(e.w) + '" height="' + e.h +
+        '" fill="#ffffff" stroke="#2f2f2f" stroke-width="1.65"/>');
+      inner.push(svgText(e.cx, e.cy - 7, e.comment || e.name, { size: size + 1, anchor: 'middle', weight: 600 }));
+      inner.push(svgText(e.cx, e.cy + 15, e.name, { size: size - 4, anchor: 'middle', fill: '#666666' }));
+      parts.push(group('er_' + e.name, inner.join('')));
+    });
+
+    // 外键 → 关系菱形
+    const byName = {};
+    entities.forEach(e => { byName[e.name] = e; });
+    const used = schema.fks.filter(f => byName[f.from] && byName[f.to]);
+    if (used.length){
+      const diamondY = entities.reduce((a, e) => Math.max(a, e.cy + e.h / 2), 0) + 250;
+      used.forEach((f, i) => {
+        const a = byName[f.from], b = byName[f.to];
+        const mx = (a.cx + b.cx) / 2 + (i % 2 ? 40 : -40);
+        const label = f.field || '关系';
+        const dw = Math.max(100, tw(label, size - 1) + 56), dh = 48;
+        parts.push('<path d="M ' + round(a.cx) + ' ' + round(a.cy + a.h / 2) + ' V ' + round(diamondY) + ' H ' + round(mx) + '" stroke="#111111" stroke-width="1.2" fill="none"/>');
+        parts.push('<path d="M ' + round(b.cx) + ' ' + round(b.cy + b.h / 2) + ' V ' + round(diamondY) + ' H ' + round(mx) + '" stroke="#111111" stroke-width="1.2" fill="none"/>');
+        parts.push('<polygon points="' + round(mx) + ',' + round(diamondY - dh / 2) + ' ' + round(mx + dw / 2) + ',' + round(diamondY) + ' ' +
+          round(mx) + ',' + round(diamondY + dh / 2) + ' ' + round(mx - dw / 2) + ',' + round(diamondY) + '" fill="#ffffff" stroke="#111111" stroke-width="1.4"/>');
+        parts.push(svgText(mx, diamondY, label, { size: size - 1, anchor: 'middle' }));
+      });
+    }
+
+    let right = 0, bottom = 0;
+    entities.forEach(e => {
+      right = Math.max(right, e.cx + e.w / 2);
+      bottom = Math.max(bottom, e.cy + e.h / 2);
+      e.fields.forEach(f => { right = Math.max(right, f.cx + f.rx); bottom = Math.max(bottom, f.cy + f.ry); });
+      right = Math.max(right, e.cx + 230);
+    });
+    return { W: Math.max(760, right + 180), H: Math.max(520, bottom + 220), parts: parts };
+  }
+
+  /* ================= 全局 ER 图 ================= */
+  function renderGlobalEr(text, style){
+    const schema = parseSchema(text);
+    if (!schema.tables.length) throw new Error('请粘贴 MySQL 建表语句或 DBML');
+    const size = style.fontSize;
+    const lh = size + 8;
+    const parts = [];
+    const entities = schema.tables;
+    const showAttrs = style.showAttrs !== false;
+
+    entities.forEach(e => {
+      const label = e.comment || e.name;
+      const fieldW = showAttrs ? Math.max.apply(null, e.fields.map(f => tw(f.name + '  ' + f.type.toUpperCase() + (f.len ? '(' + f.len + ')' : ''), size - 2)).concat([0])) : 0;
+      e.w = Math.max(172, tw(label, size + 1) + 46, fieldW + 40);
+      e.headH = 44;
+      e.rowH = showAttrs ? Math.max(1, e.fields.length) * lh + 12 : 0;
+      e.h = e.headH + e.rowH;
+    });
+
+    const cols = entities.length <= 2 ? 1 : (entities.length <= 4 ? 2 : 3);
+    const rows = Math.ceil(entities.length / cols);
+    const colW = new Array(cols).fill(0), rowH = new Array(rows).fill(0);
+    entities.forEach((e, i) => {
+      const ci = i % cols, ri = Math.floor(i / cols);
+      colW[ci] = Math.max(colW[ci], e.w); rowH[ri] = Math.max(rowH[ri], e.h);
+    });
+    let x = 90, y = 90;
+    const colX = [], rowY = [];
+    for (let ci = 0; ci < cols; ci++){ colX[ci] = x + colW[ci] / 2; x += colW[ci] + 220; }
+    for (let ri = 0; ri < rows; ri++){ rowY[ri] = y + rowH[ri] / 2; y += rowH[ri] + 210; }
+
+    entities.forEach((e, i) => {
+      const ci = i % cols, ri = Math.floor(i / cols);
+      const o = offs('ge_' + e.name);
+      e.cx = colX[ci] + o.dx; e.cy = rowY[ri] + o.dy;
+      e.x = e.cx - e.w / 2; e.y = e.cy - e.h / 2;
+    });
+
+    const byName = {};
+    entities.forEach(e => { byName[e.name] = e; });
+
+    // 关系菱形与连线
+    const fks = schema.fks.filter(f => byName[f.from] && byName[f.to]);
+    fks.forEach((f, i) => {
+      const a = byName[f.from], b = byName[f.to];
+      const dx = b.cx - a.cx, dy = b.cy - a.cy;
+      const len = Math.hypot(dx, dy) || 1;
+      const nx = -dy / len, ny = dx / len;
+      // 沿线段按序号错开落点，避免多外键时菱形重叠
+      const t = (i + 1) / (fks.length + 1);
+      const shift = i % 2 ? 16 : -16;
+      const mx = a.cx + dx * t + nx * shift, my = a.cy + dy * t + ny * shift;
+      const dw = Math.max(104, tw(f.field, size - 2) + 56), dh = 50;
+      const p1 = borderPoint({ x: a.x, y: a.y, w: a.w, h: a.h }, mx, my);
+      const p2 = borderPoint({ x: b.x, y: b.y, w: b.w, h: b.h }, mx, my);
+      parts.push('<path d="M ' + round(p1.x) + ' ' + round(p1.y) + ' L ' + round(mx) + ' ' + round(my) + ' L ' + round(p2.x) + ' ' + round(p2.y) +
+        '" stroke="#111111" stroke-width="1.25" fill="none"/>');
+      parts.push('<polygon points="' + round(mx) + ',' + round(my - dh / 2) + ' ' + round(mx + dw / 2) + ',' + round(my) + ' ' +
+        round(mx) + ',' + round(my + dh / 2) + ' ' + round(mx - dw / 2) + ',' + round(my) + '" fill="#ffffff" stroke="#111111" stroke-width="1.4"/>');
+      parts.push(svgText(mx, my, f.field, { size: size - 2, anchor: 'middle' }));
+      // a 为外键所在子表（N 端），b 为主表（1 端）
+      const ax = (p1.x + mx) / 2, ay = (p1.y + my) / 2;
+      parts.push(svgText(ax, ay - 10, 'N', { size: size - 2, anchor: 'middle', fill: '#333333' }));
+      const bx = (p2.x + mx) / 2, by = (p2.y + my) / 2;
+      parts.push(svgText(bx, by - 10, '1', { size: size - 2, anchor: 'middle', fill: '#333333' }));
+    });
+
+    entities.forEach(e => {
+      const label = e.comment || e.name;
+      let inner = '<rect x="' + round(e.x) + '" y="' + round(e.y) + '" width="' + round(e.w) + '" height="' + round(e.h) + '" rx="3" fill="#ffffff" stroke="#2f2f2f" stroke-width="1.5"/>';
+      inner += '<path d="M ' + round(e.x) + ' ' + round(e.y + e.headH) + ' H ' + round(e.x + e.w) + '" stroke="#2f2f2f" stroke-width="1.3"/>';
+      inner += svgText(e.cx, e.y + 18, label, { size: size, anchor: 'middle', weight: 600 });
+      inner += svgText(e.cx, e.y + 35, e.name, { size: size - 4, anchor: 'middle', fill: '#666666' });
+      if (showAttrs){
+        e.fields.forEach((f, i) => {
+          const ty = e.y + e.headH + 14 + i * lh;
+          inner += svgText(e.x + 12, ty, f.name, { size: size - 2, anchor: 'start', underline: style.pkUnderline && f.pk });
+          inner += svgText(e.x + e.w - 12, ty, f.type.toUpperCase() + (f.len ? '(' + f.len + ')' : ''), { size: size - 3, anchor: 'end', fill: '#666666' });
+        });
+      }
+      parts.push(group('ge_' + e.name, inner));
+    });
+
+    let right = 0, bottom = 0;
+    entities.forEach(e => { right = Math.max(right, e.x + e.w); bottom = Math.max(bottom, e.y + e.h); });
+    return { W: Math.max(760, right + 130), H: Math.max(520, bottom + 120), parts: parts };
+  }
+
+  /* ================= 三线表 ================= */
+  function tableRows(t){
+    return t.fields.map(f => [f.name, f.type.toUpperCase(), f.len, f.pk ? 'Y' : 'N', f.nullable ? '是' : '否', f.def, f.comment]);
+  }
+
+  function renderTable(text, style){
+    const schema = parseSchema(text);
+    if (!schema.tables.length) throw new Error('请粘贴 MySQL 建表语句');
+    const size = style.fontSize;
+    const HEAD = ['字段名', '数据类型', '字段长度', '主键', '是否为空', '默认值', '字段说明'];
+    const MINW = [76, 86, 74, 52, 76, 116, 96];
+    const padX = 10;
+    const rowsByTable = schema.tables.map(t => tableRows(t));
+    const colW = HEAD.map((h, i) => Math.max(MINW[i], tw(h, size) + padX * 2));
+    rowsByTable.forEach(rows => {
+      rows.forEach(r => {
+        r.forEach((cell, i) => { colW[i] = Math.max(colW[i], tw(cell, size) + padX * 2); });
+      });
+    });
+    const tableW = colW.reduce((a, b) => a + b, 0);
+    const left = 60;
+    const rowH = Math.max(28, Math.round(size * style.rowGap + 12));
+    const parts = [];
+    let y = 52;
+
+    schema.tables.forEach((t, ti) => {
+      const caption = t.comment ? t.comment + '（' + t.name + '）' : t.name;
+      const o = offs('tb_' + t.name);
+      const tx = left + o.dx, ty0 = y + o.dy;
+      parts.push(svgText(tx + tableW / 2, ty0, caption, { size: size + 2, anchor: 'middle', weight: 600 }));
+      const headTop = ty0 + 22, headBottom = headTop + rowH;
+
+      let inner = '';
+      if (style.headBg && style.headBg !== 'transparent')
+        inner += '<rect x="' + tx + '" y="' + round(headTop) + '" width="' + tableW + '" height="' + rowH + '" fill="' + style.headBg + '"/>';
+      let cx = tx;
+      HEAD.forEach((h, i) => {
+        const txText = style.center ? cx + colW[i] / 2 : cx + padX;
+        inner += svgText(txText, headTop + rowH / 2, h, { size: size, anchor: style.center ? 'middle' : 'start', weight: 600, fill: '#111827' });
+        cx += colW[i];
+      });
+      inner += '<path d="M ' + tx + ' ' + round(headTop) + ' H ' + (tx + tableW) + '" stroke="#1e293b" stroke-width="2"/>';
+      inner += '<path d="M ' + tx + ' ' + round(headBottom) + ' H ' + (tx + tableW) + '" stroke="#1e293b" stroke-width="1"/>';
+
+      let ry = headBottom;
+      rowsByTable[ti].forEach(r => {
+        cx = tx;
+        r.forEach((cell, i) => {
+          const cxx = style.center ? cx + colW[i] / 2 : cx + padX;
+          inner += svgText(cxx, ry + rowH / 2, cell, { size: size, anchor: style.center ? 'middle' : 'start', fill: '#374151' });
+          cx += colW[i];
+        });
+        ry += rowH;
+      });
+      inner += '<path d="M ' + tx + ' ' + round(ry) + ' H ' + (tx + tableW) + '" stroke="#1e293b" stroke-width="2"/>';
+      parts.push(group('tb_' + t.name, inner));
+      y = ry + 64;
+    });
+
+    return { W: Math.max(820, tableW + left * 2), H: Math.max(420, y + 20), parts: parts };
+  }
+
+  function moduleStats(text){
+    const { root } = parseOutline(text);
+    const s = countStats(root);
+    return [['模块', s.modules], ['功能', s.funcs]];
+  }
+
+  /* ================= 各图种默认内容与示例 ================= */
+  const FLOW_DEFAULT = [
+    '1-开始-开始登录',
+    '2-输入-输入账号和密码',
+    '3-处理-提交登录请求',
+    '4-判断-账号密码是否正确?',
+    '    是-5',
+    '    否-2',
+    '5-处理-登录成功',
+    '6-输出-进入系统首页',
+    '7-结束-流程结束'
+  ].join('\n');
+
+  const FLOW_SAMPLE = [
+    '1-开始-提交订单',
+    '2-处理-校验库存',
+    '3-判断-库存是否充足?',
+    '    是-4',
+    '    否-8',
+    '4-处理-锁定库存',
+    '5-输入-选择支付方式',
+    '6-处理-调用支付接口',
+    '7-判断-支付是否成功?',
+    '    是-10',
+    '    否-8',
+    '8-异常-提示缺货或支付失败',
+    '9-结束-订单关闭',
+    '10-输出-生成发货单 ->9',
+    '11-结束-订单完成 ->9'
+  ].join('\n');
+
+  const USECASE_DEFAULT = [
+    '角色：图书管理员',
+    '  图书入库',
+    '  图书查询',
+    '  借阅登记',
+    '  归还处理'
+  ].join('\n');
+
+  const USECASE_SAMPLE = [
+    '角色：读者',
+    '  检索图书',
+    '  借阅图书',
+    '    <i>身份校验',
+    '  归还图书',
+    '    <e>逾期提醒',
+    '角色：馆员',
+    '  图书入库',
+    '  借阅审核',
+    '  生成统计报表'
+  ].join('\n');
+
+  const ARCH_DEFAULT = [
+    '用户层',
+    '  学生',
+    '    选课 / 成绩查询',
+    '  教师',
+    '    成绩录入 / 课程管理',
+    '应用层',
+    '  业务服务',
+    '    选课服务 / 成绩服务',
+    '数据层',
+    '  数据库',
+    '    MySQL / Redis',
+    '横切关注点',
+    '  认证 / 日志 / 监控'
+  ].join('\n');
+
+  const SEQ_DEFAULT = [
+    '标题：第三方授权登录时序图',
+    '',
+    '用户',
+    '前端页面',
+    '授权服务',
+    '第三方平台',
+    '数据库',
+    '',
+    '用户 -> 前端页面: 点击第三方登录',
+    '前端页面 -> 授权服务: 发起授权请求',
+    '授权服务 -> 第三方平台: 跳转授权页',
+    '第三方平台 --> 前端页面: 返回授权 code',
+    '前端页面 -> 授权服务: 携带 code 兑换令牌',
+    '授权服务 -> 数据库: 校验用户信息',
+    '数据库 --> 授权服务: 返回用户数据',
+    '授权服务 --> 前端页面: 返回登录令牌',
+    '前端页面 --> 用户: 登录成功'
+  ].join('\n');
+
+  const UML_DEFAULT = [
+    'title: 教学管理系统类图',
+    '',
+    '类 学生',
+    '属性:',
+    '  +学号: string',
+    '  +姓名: string',
+    '  -密码: string',
+    '方法:',
+    '  +登录(账号: string, 密码: string): bool',
+    '  +选课(课程ID: int): bool',
+    '',
+    '类 教师',
+    '属性:',
+    '  +工号: string',
+    '  +姓名: string',
+    '方法:',
+    '  +录入成绩(课程ID: int): bool',
+    '',
+    '类 课程',
+    '属性:',
+    '  +课程ID: int',
+    '  +课程名: string',
+    '  +学分: int',
+    '方法:',
+    '  +查询大纲(): string',
+    '',
+    '类 选课记录',
+    '属性:',
+    '  +记录ID: int',
+    '  +成绩: float',
+    '方法:',
+    '  +保存(): bool',
+    '',
+    '接口 可登录',
+    '方法:',
+    '  +登录(账号: string, 密码: string): bool',
+    '',
+    '枚举 选课状态',
+    '属性:',
+    '  +待审核',
+    '  +已通过',
+    '  +已驳回',
+    '',
+    '关系:',
+    '学生 ..|> 可登录 : 实现',
+    '教师 "1" -- "*" 课程 : 授课',
+    '学生 "1" -- "1" 选课记录 : 产生',
+    '课程 "1" -- "*" 选课记录 : 对应'
+  ].join('\n');
+
+  const ER_DEFAULT = [
+    'CREATE TABLE `sys_user` (',
+    '  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT \'用户ID\',',
+    '  `username` VARCHAR(50) NOT NULL COMMENT \'用户名\',',
+    '  `password` VARCHAR(100) NOT NULL COMMENT \'密码\',',
+    '  `phone` VARCHAR(20) DEFAULT NULL COMMENT \'手机号\',',
+    '  `role_id` BIGINT NOT NULL COMMENT \'角色ID\',',
+    '  PRIMARY KEY (`id`),',
+    '  CONSTRAINT `fk_user_role` FOREIGN KEY (`role_id`) REFERENCES `sys_role` (`id`)',
+    ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT=\'用户表\';',
+    '',
+    'CREATE TABLE `sys_role` (',
+    '  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT \'角色ID\',',
+    '  `role_name` VARCHAR(50) NOT NULL COMMENT \'角色名称\',',
+    '  `role_code` VARCHAR(50) NOT NULL COMMENT \'角色编码\',',
+    '  PRIMARY KEY (`id`)',
+    ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT=\'角色表\';'
+  ].join('\n');
+
+  const GLOBAL_ER_DEFAULT = [
+    'CREATE TABLE `sys_user` (',
+    '  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT \'用户ID\',',
+    '  `username` VARCHAR(50) NOT NULL COMMENT \'用户名\',',
+    '  `password` VARCHAR(100) NOT NULL COMMENT \'密码\',',
+    '  `create_time` DATETIME NOT NULL COMMENT \'创建时间\',',
+    '  PRIMARY KEY (`id`)',
+    ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT=\'用户\';',
+    '',
+    'CREATE TABLE `sys_role` (',
+    '  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT \'角色ID\',',
+    '  `role_name` VARCHAR(50) NOT NULL COMMENT \'角色名称\',',
+    '  PRIMARY KEY (`id`)',
+    ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT=\'角色\';',
+    '',
+    'CREATE TABLE `sys_user_role` (',
+    '  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT \'主键\',',
+    '  `user_id` BIGINT NOT NULL COMMENT \'用户ID\',',
+    '  `role_id` BIGINT NOT NULL COMMENT \'角色ID\',',
+    '  PRIMARY KEY (`id`),',
+    '  CONSTRAINT `fk_ur_user` FOREIGN KEY (`user_id`) REFERENCES `sys_user` (`id`),',
+    '  CONSTRAINT `fk_ur_role` FOREIGN KEY (`role_id`) REFERENCES `sys_role` (`id`)',
+    ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT=\'用户角色\';',
+    '',
+    'CREATE TABLE `article` (',
+    '  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT \'文章ID\',',
+    '  `title` VARCHAR(120) NOT NULL COMMENT \'标题\',',
+    '  `content` TEXT COMMENT \'正文\',',
+    '  `author_id` BIGINT NOT NULL COMMENT \'作者ID\',',
+    '  PRIMARY KEY (`id`),',
+    '  CONSTRAINT `fk_article_user` FOREIGN KEY (`author_id`) REFERENCES `sys_user` (`id`)',
+    ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT=\'文章\';'
+  ].join('\n');
+
+  const TABLE_DEFAULT = [
+    'CREATE TABLE `student` (',
+    '  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT \'学生ID\',',
+    '  `student_no` VARCHAR(20) NOT NULL COMMENT \'学号\',',
+    '  `name` VARCHAR(50) NOT NULL COMMENT \'学生姓名\',',
+    '  `gender` TINYINT NOT NULL DEFAULT 0 COMMENT \'性别：0未知，1男，2女\',',
+    '  `phone` VARCHAR(20) DEFAULT NULL COMMENT \'联系电话\',',
+    '  `enrollment_year` YEAR NOT NULL COMMENT \'入学年份\',',
+    '  `status` TINYINT NOT NULL DEFAULT 1 COMMENT \'状态：0停用，1正常\',',
+    '  `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT \'创建时间\',',
+    '  PRIMARY KEY (`id`),',
+    '  UNIQUE KEY `uk_student_no` (`student_no`)',
+    ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT=\'学生信息表\';',
+    '',
+    'CREATE TABLE `course` (',
+    '  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT \'课程ID\',',
+    '  `course_code` VARCHAR(20) NOT NULL COMMENT \'课程编号\',',
+    '  `course_name` VARCHAR(80) NOT NULL COMMENT \'课程名称\',',
+    '  `credit` DECIMAL(3,1) NOT NULL DEFAULT 2.0 COMMENT \'学分\',',
+    '  `teacher` VARCHAR(50) DEFAULT NULL COMMENT \'任课教师\',',
+    '  `student_count` INT NOT NULL DEFAULT 0 COMMENT \'选课人数\',',
+    '  PRIMARY KEY (`id`)',
+    ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT=\'课程表\';'
+  ].join('\n');
+
+  const DIAGRAMS = {
+    module: {
+      label: '功能模块图', sub: '缩进即层级', drawio: true,
+      groups: ['module', 'line'],
+      statLabels: ['模块', '功能'], stats: moduleStats,
+      render: renderModule,
+      defaultText: DEFAULT_OUTLINE,
+      samples: SAMPLES,
+      title: (t) => { try { return parseOutline(t).root.name || '未命名图表'; } catch(e){ return '未命名图表'; } },
+      help: '<ul>' +
+        '<li>第 1 行顶格写<b>系统名称</b>。</li>' +
+        '<li>下一级模块在行首缩进 <code>2 个空格</code>；每多一级再加 2 个空格（Tab 也可以）。</li>' +
+        '<li>最多支持 <b>4 级模块</b>，最后一级作为具体功能展示。</li>' +
+        '<li>点击「生成图表」或按 <code>Ctrl + Enter</code> 更新图。</li>' +
+        '<li>生成后节点可自由拖动，连线自动跟随；「重排」恢复自动布局。</li>' +
+        '</ul>'
+    },
+    flow: {
+      label: '流程图', sub: '序号-类型-文本', drawio: false,
+      groups: ['line'],
+      statLabels: ['节点', '分支'], stats: (t) => { const n = parseFlow(t); return [['节点', n.length], ['分支', n.reduce((a, x) => a + x.branches.length, 0)]]; },
+      render: renderFlow,
+      defaultText: FLOW_DEFAULT,
+      samples: [{ key: 'login', label: '登录流程', text: FLOW_DEFAULT }, { key: 'order', label: '下单流程（含分支跳转）', text: FLOW_SAMPLE }],
+      title: (t) => { try { return parseFlow(t)[0].text || '流程图'; } catch(e){ return '流程图'; } },
+      help: '<ul>' +
+        '<li>基本格式：<code>序号-类型-文本</code>，例如 <code>1-开始-开始登录</code>。</li>' +
+        '<li>节点类型：开始、结束、处理、判断、输入、输出、异常。</li>' +
+        '<li>判断分支：在判断节点下方缩进填写 <code>是-5</code>，可写多条。</li>' +
+        '<li>指定跳转：节点文本末尾加 <code>-&gt;目标序号</code>，用于回路或多分支汇合。</li>' +
+        '<li>开始/结束为圆角矩形，输出/输入为平行四边形，判断为菱形，异常为虚线框。</li>' +
+        '</ul>'
+    },
+    usecase: {
+      label: '用例图', sub: '角色 + 缩进用例', drawio: false,
+      groups: ['line'],
+      statLabels: ['角色', '用例'], stats: (t) => { const as = parseUsecase(t); let n = 0; as.forEach(a => { n += a.uses.length; a.uses.forEach(u => { n += u.kids.length; }); }); return [['角色', as.length], ['用例', n]]; },
+      render: renderUsecase,
+      defaultText: USECASE_DEFAULT,
+      samples: [{ key: 'lib', label: '图书管理用例', text: USECASE_DEFAULT }, { key: 'include', label: '含包含/扩展关系', text: USECASE_SAMPLE }],
+      title: (t) => { try { return parseUsecase(t)[0].name + '用例图'; } catch(e){ return '用例图'; } },
+      help: '<ul>' +
+        '<li>角色：写 <code>角色：名称</code>；不写前缀时顶格名称也会被当作角色。</li>' +
+        '<li>关联用例：在角色下方缩进 2 个空格填写用例名称。</li>' +
+        '<li>包含关系：子用例名前加 <code>&lt;i&gt;</code>，表示上级用例包含它。</li>' +
+        '<li>扩展关系：子用例名前加 <code>&lt;e&gt;</code>，表示它扩展上级用例。</li>' +
+        '</ul>'
+    },
+    architecture: {
+      label: '系统架构图', sub: '顶格层级 + 缩进节点', drawio: false,
+      groups: ['line'],
+      statLabels: ['层级', '模块'], stats: (t) => { const ls = parseArch(t); return [['层级', ls.length], ['模块', ls.reduce((a, l) => a + l.nodes.length, 0)]]; },
+      render: renderArch,
+      defaultText: ARCH_DEFAULT,
+      samples: [{ key: 'layered', label: '分层架构（含横切）', text: ARCH_DEFAULT }],
+      title: (t) => { try { return parseArch(t)[0].name + '架构图'; } catch(e){ return '系统架构图'; } },
+      help: '<ul>' +
+        '<li>架构层级：顶格填写层级名称。</li>' +
+        '<li>二级节点：行首缩进 2 个空格填写节点名称。</li>' +
+        '<li>节点说明：行首缩进 4 个空格填写说明内容。</li>' +
+        '<li>横切关注点：名称含「横切」或「公共」的层显示为虚线区域。</li>' +
+        '</ul>'
+    },
+    sequence: {
+      label: '时序图', sub: '参与者 + 消息', drawio: false,
+      groups: ['line'],
+      statLabels: ['参与者', '消息'], stats: (t) => { const s = parseSequence(t); return [['参与者', s.actors.length], ['消息', s.messages.length]]; },
+      render: renderSequence,
+      defaultText: SEQ_DEFAULT,
+      samples: [{ key: 'oauth', label: '第三方授权登录', text: SEQ_DEFAULT }],
+      title: (t) => { try { const s = parseSequence(t); return s.title || (s.actors[0] ? s.actors[0].name : '时序图'); } catch(e){ return '时序图'; } },
+      help: '<ul>' +
+        '<li>标题：<code>标题：名称</code>。</li>' +
+        '<li>参与者：每行一个；写 <code>角色 用户</code> 会画成小人。</li>' +
+        '<li>调用消息：<code>发送方 -&gt; 接收方: 消息内容</code>。</li>' +
+        '<li>返回消息：<code>发送方 --&gt; 接收方: 消息内容</code>（虚线）。</li>' +
+        '<li>条件分支：<code>alt / else / end</code> 会按顺序绘制消息，不画分支边框。</li>' +
+        '</ul>'
+    },
+    uml: {
+      label: 'UML 类图', sub: '类 + 属性/方法 + 关系', drawio: false,
+      groups: ['line'],
+      statLabels: ['类', '属性', '方法', '关系'], stats: (t) => { const u = parseUml(t); let a = 0, m = 0; u.classes.forEach(c => { a += c.attrs.length; m += c.methods.length; }); return [['类', u.classes.length], ['属性', a], ['方法', m], ['关系', u.rels.length]]; },
+      render: renderUml,
+      defaultText: UML_DEFAULT,
+      samples: [{ key: 'teach', label: '教学管理系统', text: UML_DEFAULT }],
+      title: (t) => { try { const u = parseUml(t); return u.title || 'UML 类图'; } catch(e){ return 'UML 类图'; } },
+      help: '<ul>' +
+        '<li><code>title:</code> 设标题；<code>类/抽象类/接口/枚举 名称</code> 定义类。</li>' +
+        '<li><code>属性:</code> 与 <code>方法:</code> 分区；<code>+ - # ~</code> 为可见性；带括号识别为方法。</li>' +
+        '<li>关系符号：<code>..&gt;</code> 依赖、<code>--&gt;</code> 关联、<code>--o</code> 聚合、<code>--*</code> 组合、<code>--|&gt;</code> 继承、<code>..|&gt;</code> 实现。</li>' +
+        '<li>冒号后的文字只是标签；基数要加引号，如 <code>用户 "1" --&gt; "*" 订单 : 下单</code>。</li>' +
+        '</ul>'
+    },
+    er: {
+      label: 'ER 属性图', sub: 'SQL / DBML · Chen 记法', drawio: false,
+      groups: ['line', 'pk'],
+      statLabels: ['表', '字段', '外键'], stats: (t) => { const s = parseSchema(t); return [['表', s.tables.length], ['字段', s.tables.reduce((a, x) => a + x.fields.length, 0)], ['外键', s.fks.length]]; },
+      render: renderEr,
+      defaultText: ER_DEFAULT,
+      samples: [{ key: 'user-role', label: '用户与角色', text: ER_DEFAULT }],
+      title: (t) => { try { return firstTitle(t, parseSchema(t)); } catch(e){ return 'ER 属性图'; } },
+      help: '<ul>' +
+        '<li>SQL：粘贴完整的 MySQL <code>CREATE TABLE</code> 建表语句。</li>' +
+        '<li>DBML：<code>Table 表名 { ... }</code> 定义表，<code>Ref: 表.字段 &gt; 表.字段</code> 定义关系。</li>' +
+        '<li>图形含义：矩形=实体，菱形=关系，椭圆=属性，下划线=主键。</li>' +
+        '<li>外键会画成关系菱形，主键字段名自动加下划线（可在样式里关闭）。</li>' +
+        '</ul>'
+    },
+    globalEr: {
+      label: '全局 ER 图', sub: 'SQL / DBML · 表内字段', drawio: false,
+      groups: ['line', 'pk', 'attrs'],
+      statLabels: ['表', '字段', '外键'], stats: (t) => { const s = parseSchema(t); return [['表', s.tables.length], ['字段', s.tables.reduce((a, x) => a + x.fields.length, 0)], ['外键', s.fks.length]]; },
+      render: renderGlobalEr,
+      defaultText: GLOBAL_ER_DEFAULT,
+      samples: [{ key: 'perm', label: '用户权限与内容系统', text: GLOBAL_ER_DEFAULT }],
+      title: (t) => { try { return firstTitle(t, parseSchema(t)); } catch(e){ return '全局 ER 图'; } },
+      help: '<ul>' +
+        '<li>输入与 ER 属性图一致：SQL 或 DBML。</li>' +
+        '<li>实体框内直接列出字段，主键加下划线，外键用关系菱形连接并标 1 / N。</li>' +
+        '<li>样式里可以关闭「显示字段属性」，只保留表名。</li>' +
+        '</ul>'
+    },
+    table: {
+      label: '三线表', sub: 'SQL 建表语句 → 表格', drawio: false,
+      groups: ['table'],
+      statLabels: ['表', '字段', '外键'], stats: (t) => { const s = parseSchema(t); return [['表', s.tables.length], ['字段', s.tables.reduce((a, x) => a + x.fields.length, 0)], ['外键', s.fks.length]]; },
+      render: renderTable,
+      defaultText: TABLE_DEFAULT,
+      samples: [{ key: 'course', label: '课程选课系统', text: TABLE_DEFAULT }],
+      title: (t) => { try { return firstTitle(t, parseSchema(t)); } catch(e){ return '三线表'; } },
+      help: '<ul>' +
+        '<li>SQL：粘贴完整的 MySQL <code>CREATE TABLE</code> 建表语句。</li>' +
+        '<li>列：字段名 / 数据类型 / 字段长度 / 主键 / 是否为空 / 默认值 / 字段说明。</li>' +
+        '<li>每张表上方显示「表注释（表名）」；三线规则：表头上下 + 表尾加粗线。</li>' +
+        '<li>可在样式里调整行距、内容居中和表头背景。</li>' +
+        '</ul>'
+    }
+  };
+
+
+  function scheduleRender(){
+    if (renderRaf) return;
+    renderRaf = requestAnimationFrame(() => {
+      renderRaf = null;
+      render(false);
+    });
+  }
+
+  /* ================= 视图缩放 / 平移 ================= */
+  function applyView(){
+    const v = state.view;
+    stage.style.transform = 'translate(' + v.tx + 'px,' + v.ty + 'px) scale(' + v.scale + ')';
+    $('#zoomVal').textContent = Math.round(v.scale * 100) + '%';
+  }
+
+  function fitView(){
+    if (!state.tree) return;
+    const vw = viewport.clientWidth;
+    const vh = viewport.clientHeight;
+    if (!vw || !vh) return;
+    const { W, H } = state.tree;
+    const phone = isPhone();
+    const margin = phone ? 10 : 48;
+    let s = clamp(Math.min((vw - margin * 2) / W, (vh - margin * 2) / H), 0.2, 1.4);
+    if (phone){
+      // 手机上按宽度适配，保证字不至于太小；超宽图可左右拖动
+      s = clamp(Math.max(0.4, Math.min((vw - margin * 2) / W, 1.1)), 0.2, 1.4);
+    }
+    state.view.scale = s;
+    state.view.tx = (vw - W * s) / 2;
+    state.view.ty = phone ? 58 : (vh - H * s) / 2;
+    applyView();
+  }
+
+  function zoomAt(newScale, clientX, clientY){
+    if (!state.tree) return;
+    const rect = viewport.getBoundingClientRect();
+    const px = clientX - rect.left;
+    const py = clientY - rect.top;
+    const v = state.view;
+    const s = clamp(newScale, 0.2, 2);
+    const ratio = s / v.scale;
+    v.tx = px - (px - v.tx) * ratio;
+    v.ty = py - (py - v.ty) * ratio;
+    v.scale = s;
+    applyView();
+  }
+
+  function toSvgPoint(clientX, clientY){
+    const ctm = stage.getScreenCTM();
+    if (!ctm) return { x:clientX, y:clientY };
+    const pt = new DOMPoint(clientX, clientY).matrixTransform(ctm.inverse());
+    return { x: pt.x, y: pt.y };
+  }
+
+  /* ================= 节点拖动 ================= */
+  function startNodeDrag(e){
+    if (e.button !== 0) return;
+    const id = e.currentTarget.getAttribute('data-id');
+    if (!id) return;
+    const pt = toSvgPoint(e.clientX, e.clientY);
+    const off = state.positions[id] || { dx:0, dy:0 };
+    dragState = {
+      id,
+      startX: pt.x,
+      startY: pt.y,
+      baseDx: off.dx || 0,
+      baseDy: off.dy || 0,
+      from: { dx: off.dx || 0, dy: off.dy || 0 },
+      moved: false
+    };
+    e.preventDefault();
+    e.stopPropagation();
+    window.addEventListener('pointermove', onNodeMove);
+    window.addEventListener('pointerup', endNodeDrag, { once:true });
+  }
+
+  function onNodeMove(e){
+    if (!dragState) return;
+    const pt = toSvgPoint(e.clientX, e.clientY);
+    const dx = dragState.baseDx + (pt.x - dragState.startX);
+    const dy = dragState.baseDy + (pt.y - dragState.startY);
+    if (Math.abs(dx - dragState.from.dx) > 0.5 || Math.abs(dy - dragState.from.dy) > 0.5) dragState.moved = true;
+    state.positions[dragState.id] = { dx, dy };
+    scheduleRender();
+  }
+
+  function endNodeDrag(){
+    window.removeEventListener('pointermove', onNodeMove);
+    if (!dragState) return;
+    if (dragState.moved){
+      undoStack.push({
+        id: dragState.id,
+        from: { dx: dragState.from.dx, dy: dragState.from.dy },
+        to: Object.assign({}, state.positions[dragState.id])
+      });
+      if (undoStack.length > 100) undoStack.shift();
+      scheduleDraftSave();
+    }
+    dragState = null;
+  }
+
+  function undoDrag(){
+    const last = undoStack.pop();
+    if (!last) return;
+    if (Math.abs(last.from.dx) < 0.01 && Math.abs(last.from.dy) < 0.01){
+      delete state.positions[last.id];
+    }else{
+      state.positions[last.id] = { dx:last.from.dx, dy:last.from.dy };
+    }
+    render(false);
+    scheduleDraftSave();
+    toast('已撤销节点移动');
+  }
+
+  /* ================= 画布平移与滚轮 ================= */
+  viewport.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return;
+    if (e.target.closest('g.node')) return;
+    panState = { startX: e.clientX, startY: e.clientY, tx: state.view.tx, ty: state.view.ty };
+    viewport.classList.add('panning');
+    window.addEventListener('pointermove', onPanMove);
+    window.addEventListener('pointerup', endPan, { once:true });
+  });
+
+  function onPanMove(e){
+    if (!panState) return;
+    state.view.tx = panState.tx + (e.clientX - panState.startX);
+    state.view.ty = panState.ty + (e.clientY - panState.startY);
+    applyView();
+  }
+
+  function endPan(){
+    panState = null;
+    viewport.classList.remove('panning');
+    window.removeEventListener('pointermove', onPanMove);
+  }
+
+  viewport.addEventListener('wheel', (e) => {
+    if (!state.tree) return;
+    e.preventDefault();
+    const factor = Math.exp(-e.deltaY * 0.0015);
+    zoomAt(state.view.scale * factor, e.clientX, e.clientY);
+  }, { passive:false });
+
+  /* ================= 手机端视图切换 / 双指缩放 ================= */
+  function isPhone(){
+    return window.matchMedia('(max-width: 760px)').matches;
+  }
+
+  // 无界面模式：?bare=1，供命令行 / 截图 / 嵌入使用
+  function isBare(){
+    return /(?:^|[?&])bare=1(?:&|$)/.test(location.search);
+  }
+
+  function setMobileView(v){
+    document.body.dataset.view = v;
+    document.querySelectorAll('#mobileTabs .mt-btn').forEach(b => {
+      b.classList.toggle('active', b.getAttribute('data-view') === v);
+    });
+    if (v === 'preview') requestAnimationFrame(fitView);
+  }
+
+  document.querySelectorAll('#mobileTabs .mt-btn').forEach(btn => {
+    btn.addEventListener('click', () => setMobileView(btn.getAttribute('data-view')));
+  });
+
+  let pinchState = null;
+  viewport.addEventListener('touchstart', (e) => {
+    if (e.touches.length !== 2) return;
+    const a = e.touches[0], b = e.touches[1];
+    pinchState = {
+      dist: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY),
+      scale: state.view.scale
+    };
+    endPan();
+  }, { passive:true });
+
+  viewport.addEventListener('touchmove', (e) => {
+    if (!pinchState || e.touches.length !== 2) return;
+    e.preventDefault();
+    const a = e.touches[0], b = e.touches[1];
+    const dist = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+    const rect = viewport.getBoundingClientRect();
+    const cx = (a.clientX + b.clientX) / 2 - rect.left;
+    const cy = (a.clientY + b.clientY) / 2 - rect.top;
+    const s = clamp(pinchState.scale * (dist / (pinchState.dist || dist)), 0.2, 2.5);
+    const v = state.view;
+    const ratio = s / v.scale;
+    v.tx = cx - (cx - v.tx) * ratio;
+    v.ty = cy - (cy - v.ty) * ratio;
+    v.scale = s;
+    applyView();
+  }, { passive:false });
+
+  ['touchend', 'touchcancel'].forEach(ev => {
+    viewport.addEventListener(ev, (e) => {
+      if (!e.touches || e.touches.length < 2) pinchState = null;
+    }, { passive:true });
+  });
+
+  /* ================= 样式 ================= */
+  function syncStyleInputs(){
+    const s = state.style;
+    $('#inLevelGap').value = s.levelGap;
+    $('#inNodeGap').value = s.nodeGap;
+    $('#inFont').value = s.font;
+    $('#inFontSize').value = s.fontSize;
+    $('#inArrow').value = s.arrow;
+    $('#inLineWidth').value = Number(s.lineWidth).toFixed(1);
+    $('#inPk').checked = s.pkUnderline !== false;
+    $('#inAttrs').checked = s.showAttrs !== false;
+    $('#inRowGap').value = Number(s.rowGap).toFixed(1);
+    $('#inCenter').checked = !!s.center;
+    $('#inHeadBg').value = s.headBg || 'transparent';
+    applyStyleVisibility();
+  }
+
+  function applyStyleVisibility(){
+    const groups = (DIAGRAMS[state.type] && DIAGRAMS[state.type].groups) || [];
+    document.querySelectorAll('.style-grid .field[data-when]').forEach(f => {
+      f.hidden = groups.indexOf(f.getAttribute('data-when')) < 0;
+    });
+  }
+
+  function applyStyleChange(field, value){
+    const s = state.style;
+    if (field === 'levelGap') s.levelGap = clamp(Math.round(value), 68, 100);
+    if (field === 'nodeGap') s.nodeGap = clamp(Math.round(value), 34, 52);
+    if (field === 'fontSize') s.fontSize = clamp(Math.round(value), 10, 36);
+    if (field === 'lineWidth') s.lineWidth = clamp(Math.round(value * 10) / 10, 1, 3);
+    if (field === 'rowGap') s.rowGap = clamp(Math.round(value * 10) / 10, 1, 2.4);
+    if (field === 'font') s.font = value;
+    if (field === 'arrow') s.arrow = value;
+    if (field === 'pkUnderline') s.pkUnderline = !!value;
+    if (field === 'showAttrs') s.showAttrs = !!value;
+    if (field === 'center') s.center = !!value;
+    if (field === 'headBg') s.headBg = value;
+    syncStyleInputs();
+    render(false);
+    scheduleDraftSave();
+  }
+
+  /* ================= 草稿与项目存储 ================= */
+  function serializeState(){
+    state.docs[state.type] = state.outline;
+    state.poses[state.type] = state.positions;
+    return {
+      type: state.type,
+      outline: state.outline,
+      style: Object.assign({}, state.style),
+      positions: Object.assign({}, state.positions),
+      projectId: state.projectId,
+      projectName: state.projectName
+    };
+  }
+
+  function saveDraftNow(){
+    try{
+      state.docs[state.type] = state.outline;
+      state.poses[state.type] = state.positions;
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({
+        type: state.type,
+        docs: state.docs,
+        styles: state.styles,
+        poses: state.poses,
+        projectId: state.projectId,
+        projectName: state.projectName
+      }));
+    }catch(e){}
+  }
+
+  function scheduleDraftSave(){
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveDraftNow, 350);
+  }
+
+  function loadDraft(){
+    try{
+      const raw = localStorage.getItem(DRAFT_KEY);
+      if (!raw) return false;
+      const d = JSON.parse(raw);
+      if (!d || !d.docs) return false;
+      state.type = DIAGRAMS[d.type] ? d.type : 'module';
+      state.docs = d.docs;
+      state.styles = {};
+      Object.keys(DIAGRAMS).forEach(k => {
+        state.styles[k] = Object.assign(defaultStyle(k), (d.styles && d.styles[k]) || {});
+      });
+      state.poses = d.poses || {};
+      state.positions = state.poses[state.type] || (state.poses[state.type] = {});
+      state.outline = state.docs[state.type] || DIAGRAMS[state.type].defaultText;
+      state.docs[state.type] = state.outline;
+      state.style = state.styles[state.type];
+      state.projectId = d.projectId || null;
+      state.projectName = d.projectName || '';
+      return true;
+    }catch(e){ return false; }
+  }
+
+  function getProjects(){
+    try{
+      const raw = localStorage.getItem(PROJECTS_KEY);
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr : [];
+    }catch(e){ return []; }
+  }
+
+  function setProjects(list){
+    try{ localStorage.setItem(PROJECTS_KEY, JSON.stringify(list)); }catch(e){}
+  }
+
+  function currentSystemName(){
+    const def = DIAGRAMS[state.type];
+    try{ return def.title(state.docs[state.type] || '') || '未命名图表'; }
+    catch(e){ return '未命名图表'; }
+  }
+
+  function saveProject(){
+    state.outline = outlineEl.value;
+    state.docs[state.type] = state.outline;
+    const list = getProjects();
+    const now = Date.now();
+    const name = currentSystemName();
+    if (state.projectId){
+      const idx = list.findIndex(p => p.id === state.projectId);
+      const record = Object.assign({}, serializeState(), { id: state.projectId, name, updatedAt: now });
+      if (idx >= 0) list[idx] = record; else list.unshift(record);
+    }else{
+      const id = 'p' + now;
+      state.projectId = id;
+      state.projectName = name;
+      list.unshift(Object.assign({}, serializeState(), { id, name, createdAt: now, updatedAt: now }));
+    }
+    setProjects(list);
+    saveDraftNow();
+    toast('已保存到「我的图表」');
+  }
+
+  function openProject(id){
+    const project = getProjects().find(p => p.id === id);
+    if (!project) return;
+    const t = DIAGRAMS[project.type] ? project.type : 'module';
+    switchType(t, true);
+    state.outline = project.outline || '';
+    state.docs[t] = state.outline;
+    state.style = Object.assign(defaultStyle(t), project.style || {});
+    state.styles[t] = state.style;
+    state.positions = project.positions || {};
+    state.poses[t] = state.positions;
+    state.projectId = project.id;
+    state.projectName = project.name || '';
+    outlineEl.value = state.outline;
+    syncStyleInputs();
+    undoStack.length = 0;
+    render(true);
+    saveDraftNow();
+    closeOverlay('projectsOverlay');
+    toast('已打开「' + (project.name || '未命名图表') + '」');
+  }
+
+  function deleteProject(id){
+    const list = getProjects().filter(p => p.id !== id);
+    setProjects(list);
+    if (state.projectId === id){
+      state.projectId = null;
+      state.projectName = '';
+      saveDraftNow();
+    }
+    renderProjects();
+    toast('已删除');
+  }
+
+  function renderProjects(){
+    const list = getProjects().sort((a,b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+    const box = $('#projectList');
+    if (!list.length){
+      box.innerHTML = '<div class="empty">还没有保存的图表。<br>在画布右上角点「保存」，或先点「新建图表」。</div>';
+      return;
+    }
+    box.innerHTML = list.map(p => {
+      const def = DIAGRAMS[p.type] || DIAGRAMS.module;
+      let meta = def.label + ' · ';
+      try{
+        const pairs = def.stats(p.outline || '');
+        meta += pairs.map(x => x[0] + ' ' + x[1]).join(' · ') + ' · ';
+      }catch(e){}
+      const time = p.updatedAt ? new Date(p.updatedAt).toLocaleString('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' }) : '';
+      return '<div class="project">' +
+        '<div class="p-main">' +
+          '<div class="p-name">' + escHtml(p.name || '未命名图表') + '</div>' +
+          '<div class="p-meta">' + meta + time + '</div>' +
+        '</div>' +
+        '<div class="p-actions">' +
+          '<button class="btn sm" data-open="' + escHtml(p.id) + '">打开</button>' +
+          '<button class="btn sm ghost" data-del="' + escHtml(p.id) + '">删除</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  /* ================= 导出 ================= */
+  function safeName(){
+    return currentSystemName().replace(/[\\/:*?"<>|]/g, '_').slice(0, 40) || DIAGRAMS[state.type].label;
+  }
+
+  function downloadBlob(blob, filename){
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1200);
+  }
+
+  function buildExportSvg(){
+    if (!state.tree) throw new Error('请先生成图表');
+    const clone = stage.cloneNode(true);
+    const { W, H } = state.tree;
+    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    clone.setAttribute('width', W);
+    clone.setAttribute('height', H);
+    clone.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    clone.removeAttribute('style');
+    // 去掉交互用的 class 并不会影响外观，但保留更稳妥
+    return clone;
+  }
+
+  function exportSvg(){
+    try{
+      const clone = buildExportSvg();
+      const str = '<?xml version="1.0" encoding="UTF-8"?>\n' + new XMLSerializer().serializeToString(clone);
+      downloadBlob(new Blob([str], { type:'image/svg+xml;charset=utf-8' }), safeName() + '.svg');
+      toast('SVG 已导出');
+    }catch(e){ toast(e.message || '导出 SVG 失败'); }
+  }
+
+  async function makePngBlob(scale){
+    if (!state.tree) throw new Error('请先生成图表');
+    const clone = buildExportSvg();
+    const str = new XMLSerializer().serializeToString(clone);
+    const url = URL.createObjectURL(new Blob([str], { type:'image/svg+xml;charset=utf-8' }));
+    const img = new Image();
+    await new Promise((resolve, reject) => {
+      img.onload = resolve;
+      img.onerror = () => reject(new Error('图片渲染失败'));
+      img.src = url;
+    });
+    const { W, H } = state.tree;
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(W * scale);
+    canvas.height = Math.round(H * scale);
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+    ctx.drawImage(img, 0, 0, W, H);
+    URL.revokeObjectURL(url);
+    return await new Promise((resolve, reject) => {
+      canvas.toBlob(b => b ? resolve(b) : reject(new Error('导出 PNG 失败')), 'image/png');
+    });
+  }
+
+  async function exportPng(){
+    try{
+      const blob = await makePngBlob(2);
+      downloadBlob(blob, safeName() + '.png');
+      toast('PNG 已导出（2 倍高清）');
+    }catch(e){ toast(e.message || '导出 PNG 失败'); }
+  }
+
+  // 复制图片到剪贴板：可直接粘进 Word / WPS / PPT
+  async function copyImage(){
+    try{
+      if (!navigator.clipboard || typeof ClipboardItem === 'undefined'){
+        throw new Error('当前浏览器不支持复制图片，请改用「导出 PNG」');
+      }
+      const blob = await makePngBlob(2);
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      toast('图片已复制，去 Word / WPS 里 Ctrl+V');
+    }catch(e){
+      toast(e && e.name === 'NotAllowedError'
+        ? '浏览器拒绝了剪贴板权限，请改用「导出 PNG」'
+        : (e.message || '复制失败'));
+    }
+  }
+
+  function blobToBase64(blob){
+    return new Promise((resolve, reject) => {
+      const fr = new FileReader();
+      fr.onload = () => resolve(String(fr.result).split(',')[1] || '');
+      fr.onerror = () => reject(new Error('读取图片失败'));
+      fr.readAsDataURL(blob);
+    });
+  }
+
+  // 导出 Word：A4、图片按版心宽度嵌入，可直接排版进论文
+  async function exportWord(){
+    try{
+      if (!state.tree) throw new Error('请先生成图表');
+      toast('正在生成 Word…');
+      const png = await makePngBlob(2.5);
+      const b64 = await blobToBase64(png);
+      const { W, H } = state.tree;
+      const widthCm = Math.min(15.5, 21 * W / H).toFixed(2);
+      const name = currentSystemName() || DIAGRAMS[state.type].label;
+      const html = '<html xmlns:o="urn:schemas-microsoft-com:office:office" ' +
+        'xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">' +
+        '<head><meta charset="utf-8"><title>' + escHtml(name) + '</title>' +
+        '<!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom>' +
+        '</w:WordDocument></xml><![endif]-->' +
+        '<style>@page{size:21cm 29.7cm;margin:2.5cm 2.5cm 2.5cm 2.5cm}' +
+        'body{font-family:"宋体",SimSun;font-size:10.5pt;text-align:center;margin:0}' +
+        'img{width:' + widthCm + 'cm;height:auto}' +
+        'p.cap{font-family:"宋体",SimSun;font-size:10.5pt;margin:6pt 0 0;text-align:center}' +
+        '</style></head><body>' +
+        '<img src="data:image/png;base64,' + b64 + '">' +
+        '<p class="cap">图　' + escHtml(name) + '</p>' +
+        '</body></html>';
+      downloadBlob(new Blob(['\ufeff' + html], { type:'application/msword;charset=utf-8' }), safeName() + '.doc');
+      toast('Word 已导出（A4，图片已嵌入）');
+    }catch(e){ toast(e.message || '导出 Word 失败'); }
+  }
+
+  function exportDrawio(){
+    if (!state.tree){ toast('请先生成图表'); return; }
+    if (state.type !== 'module'){ toast('draw.io 导出目前只支持功能模块图'); return; }
+    try{
+      const { nodes } = state.tree;
+      const style = state.style;
+      const font = DRAWIO_FONTS[style.font] || 'SimHei';
+      const arrowMap = {
+        '无箭头': 'endArrow=none;',
+        '实心箭头': 'endArrow=block;endFill=1;',
+        '空心箭头': 'endArrow=block;endFill=0;'
+      };
+      let cells = '<mxCell id="0"/><mxCell id="1" parent="0"/>';
+      nodes.forEach(n => {
+        const size = n.isLeaf ? Math.max(12, style.fontSize - 1) : style.fontSize;
+        const boxStyle = 'rounded=0;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#111111;' +
+          'strokeWidth=' + (n.depth === 0 ? 1.8 : (n.isLeaf ? 1.6 : 1.7)) + ';' +
+          'fontFamily=' + font + ';fontSize=' + size + ';fontColor=#111111;' +
+          (n.isLeaf ? 'horizontal=0;' : 'fontStyle=' + (n.depth === 0 ? 1 : 0) + ';');
+        cells += '<mxCell id="' + n.id + '" value="' + escXml(n.name) + '" style="' + boxStyle +
+          '" vertex="1" parent="1"><mxGeometry x="' + round(n.x) + '" y="' + round(n.y) +
+          '" width="' + round(n.w) + '" height="' + round(n.h) + '" as="geometry"/></mxCell>';
+      });
+      nodes.forEach(n => {
+        if (!n.parent) return;
+        const edgeStyle = 'edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;' +
+          arrowMap[style.arrow] + 'strokeColor=#111111;strokeWidth=' + style.lineWidth + ';';
+        cells += '<mxCell id="e_' + n.id + '" style="' + edgeStyle + '" edge="1" parent="1" source="' +
+          n.parent.id + '" target="' + n.id + '"><mxGeometry relative="1" as="geometry"/></mxCell>';
+      });
+      const xml = '<?xml version="1.0" encoding="UTF-8"?>\n' +
+        '<mxfile host="moduledraw" modified="' + new Date().toISOString() + '" agent="moduledraw" version="24.0.0">' +
+        '<diagram id="func" name="' + escXml(currentSystemName()) + '">' +
+        '<mxGraphModel dx="1000" dy="800" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">' +
+        '<root>' + cells + '</root></mxGraphModel></diagram></mxfile>';
+      downloadBlob(new Blob([xml], { type:'application/xml;charset=utf-8' }), safeName() + '.drawio');
+      toast('draw.io 文件已导出');
+    }catch(e){ toast(e.message || '导出 draw.io 失败'); }
+  }
+
+  function exportJson(){
+    const data = {
+      app: 'moduledraw',
+      version: 2,
+      type: state.type,
+      typeLabel: DIAGRAMS[state.type].label,
+      name: currentSystemName(),
+      outline: state.outline,
+      style: state.style,
+      positions: state.positions,
+      savedAt: new Date().toISOString()
+    };
+    downloadBlob(new Blob([JSON.stringify(data, null, 2)], { type:'application/json;charset=utf-8' }), safeName() + '.json');
+    toast('JSON 项目文件已导出');
+  }
+
+  function importJson(file){
+    const reader = new FileReader();
+    reader.onload = () => {
+      try{
+        const data = JSON.parse(String(reader.result));
+        if (!data || typeof data.outline !== 'string') throw new Error('文件格式不正确');
+        const t = DIAGRAMS[data.type] ? data.type : 'module';
+        switchType(t, true);
+        state.outline = data.outline;
+        state.docs[t] = state.outline;
+        state.style = Object.assign(defaultStyle(t), data.style || {});
+        state.styles[t] = state.style;
+        state.positions = data.positions || {};
+        state.poses[t] = state.positions;
+        state.projectId = null;
+        state.projectName = data.name || '';
+        outlineEl.value = state.outline;
+        syncStyleInputs();
+        undoStack.length = 0;
+        render(true);
+        saveDraftNow();
+        closeOverlay('projectsOverlay');
+        toast('已导入「' + (data.name || currentSystemName()) + '」');
+      }catch(e){ toast('导入失败：' + e.message); }
+    };
+    reader.readAsText(file, 'utf-8');
+  }
+
+  /* ================= UI 辅助 ================= */
+  function toast(msg){
+    const el = $('#toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => el.classList.remove('show'), 2200);
+  }
+
+  function openOverlay(id){
+    $('#' + id).classList.add('open');
+  }
+  function closeOverlay(id){
+    $('#' + id).classList.remove('open');
+  }
+
+  function closeMenus(){
+    document.querySelectorAll('.menu.open').forEach(m => m.classList.remove('open'));
+  }
+
+  /* ================= 事件绑定 ================= */
+  /* ================= 图种切换 ================= */
+  function buildTypeOptions(){
+    $('#typeSelect').innerHTML = Object.keys(DIAGRAMS).map(k =>
+      '<option value="' + k + '">' + escHtml(DIAGRAMS[k].label) + '</option>'
+    ).join('');
+  }
+
+  function switchType(t, silent){
+    if (!DIAGRAMS[t]) return;
+    if (t === state.type && !silent) return;
+    state.docs[state.type] = outlineEl.value;
+    state.poses[state.type] = state.positions;
+    state.type = t;
+    state.style = state.styles[t] || (state.styles[t] = defaultStyle(t));
+    state.positions = state.poses[t] || (state.poses[t] = {});
+    state.outline = state.docs[t] || (state.docs[t] = DIAGRAMS[t].defaultText);
+    const def = DIAGRAMS[t];
+    outlineEl.value = state.outline;
+    outlineEl.placeholder = '在这里编辑' + def.label + '内容，右侧实时预览';
+    $('#typeSelect').value = t;
+    $('#paneTitle').textContent = def.label;
+    $('#paneSub').textContent = def.sub;
+    $('#helpTitle').textContent = def.label + '语法';
+    $('#helpBody').innerHTML = def.help;
+    $('#sampleMenu').innerHTML = def.samples.map(s =>
+      '<button class="menu-item" data-sample="' + s.key + '">' + escHtml(s.label) + '</button>'
+    ).join('');
+    const dio = document.querySelector('[data-export="drawio"]');
+    if (dio) dio.hidden = !def.drawio;
+    state.projectId = null;
+    state.projectName = '';
+    undoStack.length = 0;
+    syncStyleInputs();
+    if (!silent){
+      render(true);
+      saveDraftNow();
+    }
+  }
+
+  function generate(){
+    state.outline = outlineEl.value;
+    state.docs[state.type] = state.outline;
+    state.positions = {};
+    state.poses[state.type] = state.positions;
+    undoStack.length = 0;
+    const ok = render(true);
+    const def = DIAGRAMS[state.type];
+    if (ok){
+      saveDraftNow();
+      if (isPhone()) setMobileView('preview');
+      if (state.type === 'module' && state.dropped) toast('已生成，忽略超出 4 级模块限制的 ' + state.dropped + ' 行');
+      else toast(def.label + '已生成');
+    }else{
+      toast('内容无法解析，请对照「语法帮助」检查格式');
+    }
+  }
+
+  outlineEl.addEventListener('input', () => {
+    state.outline = outlineEl.value;
+    updateStats();
+    scheduleDraftSave();
+  });
+
+  outlineEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Tab'){
+      e.preventDefault();
+      const start = outlineEl.selectionStart;
+      const end = outlineEl.selectionEnd;
+      const val = outlineEl.value;
+      outlineEl.value = val.slice(0, start) + '  ' + val.slice(end);
+      outlineEl.selectionStart = outlineEl.selectionEnd = start + 2;
+      state.outline = outlineEl.value;
+      updateStats();
+      scheduleDraftSave();
+    }
+  });
+
+  $('#btnGenerate').addEventListener('click', generate);
+  $('#btnSave').addEventListener('click', saveProject);
+
+  $('#btnStyle').addEventListener('click', () => {
+    syncStyleInputs();
+    openOverlay('styleOverlay');
+  });
+
+  $('#btnRelayout').addEventListener('click', () => {
+    state.positions = {};
+    state.poses[state.type] = state.positions;
+    render(false);
+    saveDraftNow();
+    toast('节点已按自动布局重排');
+  });
+
+  $('#btnCopyImg').addEventListener('click', copyImage);
+
+  $('#typeSelect').addEventListener('change', (e) => {
+    switchType(e.target.value, false);
+  });
+
+  $('#btnProjects').addEventListener('click', () => {
+    renderProjects();
+    openOverlay('projectsOverlay');
+  });
+
+  $('#btnNew').addEventListener('click', () => {
+    state.outline = '未命名系统\n  模块一\n    功能一\n    功能二\n  模块二\n    功能一';
+    state.positions = {};
+    state.projectId = null;
+    state.projectName = '';
+    state.style = Object.assign({}, DEFAULT_STYLE);
+    outlineEl.value = state.outline;
+    syncStyleInputs();
+    undoStack.length = 0;
+    render(true);
+    saveDraftNow();
+    closeOverlay('projectsOverlay');
+    toast('已新建空白图表');
+  });
+
+  $('#btnImport').addEventListener('click', () => $('#importFile').click());
+  $('#importFile').addEventListener('change', (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (file) importJson(file);
+    e.target.value = '';
+  });
+
+  $('#projectList').addEventListener('click', (e) => {
+    const openId = e.target.getAttribute('data-open');
+    const delId = e.target.getAttribute('data-del');
+    if (openId) openProject(openId);
+    if (delId){
+      if (confirm('确定删除这个图表吗？删除后不可恢复。')) deleteProject(delId);
+    }
+  });
+
+  // 导出菜单
+  $('#btnExport').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const menu = $('#exportMenu');
+    const willOpen = !menu.classList.contains('open');
+    closeMenus();
+    if (willOpen) menu.classList.add('open');
+  });
+
+  $('#exportMenu').addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-export]');
+    if (!btn) return;
+    closeMenus();
+    const type = btn.getAttribute('data-export');
+    if (type === 'png') exportPng();
+    if (type === 'copy') copyImage();
+    if (type === 'word') exportWord();
+    if (type === 'svg') exportSvg();
+    if (type === 'drawio') exportDrawio();
+    if (type === 'json') exportJson();
+  });
+
+  // 示例菜单
+  const sampleMenu = $('#sampleMenu');
+  sampleMenu.innerHTML = (DIAGRAMS[state.type] || DIAGRAMS.module).samples.map(s =>
+    '<button class="menu-item" data-sample="' + s.key + '">' + escHtml(s.label) + '</button>'
+  ).join('');
+
+  $('#btnSamples').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const willOpen = !sampleMenu.classList.contains('open');
+    closeMenus();
+    if (willOpen) sampleMenu.classList.add('open');
+  });
+
+  sampleMenu.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-sample]');
+    if (!btn) return;
+    const sample = (DIAGRAMS[state.type].samples || []).find(s => s.key === btn.getAttribute('data-sample'));
+    if (!sample) return;
+    state.outline = sample.text;
+    state.docs[state.type] = sample.text;
+    state.positions = {};
+    state.poses[state.type] = state.positions;
+    state.projectId = null;
+    outlineEl.value = state.outline;
+    undoStack.length = 0;
+    render(true);
+    saveDraftNow();
+    closeMenus();
+    toast('已载入示例：' + sample.label);
+  });
+
+  // 语法帮助
+  $('#btnHelp').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const pop = $('#helpPopover');
+    const rect = e.currentTarget.getBoundingClientRect();
+    const willOpen = !pop.classList.contains('open');
+    pop.classList.remove('open');
+    if (willOpen){
+      pop.style.left = Math.min(rect.left, window.innerWidth - 350) + 'px';
+      pop.style.top = (rect.bottom + 8) + 'px';
+      pop.classList.add('open');
+    }
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.menu-wrap')) closeMenus();
+    if (!e.target.closest('#helpPopover') && !e.target.closest('#btnHelp')) $('#helpPopover').classList.remove('open');
+  });
+
+  // AI 提示词
+  const SQL_RULES = [
+    '用 MySQL 建表语句描述数据模型，工具会自动解析成图。',
+    '每张表写成 CREATE TABLE `表名` ( ... )，表名、字段名用反引号包起来。',
+    '每个字段后都要写 COMMENT \'中文含义\'，图里显示的就是这个中文说明。',
+    '主键写在表内：PRIMARY KEY (`id`)。',
+    '外键写成：CONSTRAINT `fk_名称` FOREIGN KEY (`外键字段`) REFERENCES `主表` (`主键`)。',
+    '字段类型用 BIGINT、VARCHAR(50)、DATETIME、DECIMAL(10,2)、TINYINT、TEXT 这类标准写法。',
+    '2~6 张表即可；不要输出 INSERT 语句，也不要用 ``` 代码块包起来。'
+  ];
+  const SQL_EXAMPLE = [
+    'CREATE TABLE `sys_user` (',
+    '  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT \'用户ID\',',
+    '  `username` VARCHAR(50) NOT NULL COMMENT \'用户名\',',
+    '  `role_id` BIGINT NOT NULL COMMENT \'角色ID\',',
+    '  PRIMARY KEY (`id`),',
+    '  CONSTRAINT `fk_user_role` FOREIGN KEY (`role_id`) REFERENCES `sys_role` (`id`)',
+    ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT=\'用户表\';',
+    '',
+    'CREATE TABLE `sys_role` (',
+    '  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT \'角色ID\',',
+    '  `role_name` VARCHAR(50) NOT NULL COMMENT \'角色名称\',',
+    '  PRIMARY KEY (`id`)',
+    ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT=\'角色表\';'
+  ].join('\n');
+
+  const AI_TASK = {
+    module: {
+      name: '系统功能结构图',
+      rules: [
+        '第 1 行顶格写系统名称，作为根节点。',
+        '第 2 级模块行首缩进 2 个空格，第 3 级缩进 4 个空格，第 4 级缩进 6 个空格，最多 4 级。',
+        '每一级的子项数量控制在 3~6 个，最后一级写具体功能点。',
+        '不要写序号，也不要使用 -、*、· 这类列表符号，缩进只能用空格。'
+      ],
+      example: ['学生信息管理系统', '  学生端', '    个人信息查看', '    课程查询', '    成绩查询', '  教师端', '    成绩管理', '  管理端', '    学生信息管理', '    课程管理'].join('\n')
+    },
+    flow: {
+      name: '流程图',
+      rules: [
+        '每行一个节点，格式固定为：序号-类型-文本，例如 1-开始-开始登录。',
+        '序号从 1 开始连续编号；类型只能是：开始、结束、处理、判断、输入、输出、异常。',
+        '判断节点的分支写在它的下一行，缩进 2 个空格，格式：是-目标序号 或 否-目标序号，可以写多条。',
+        '需要跳转到指定节点时，在节点文本末尾加 ->序号，例如 7-处理-返回重填->2。',
+        '第一个节点用「开始」，最后一个节点用「结束」。'
+      ],
+      example: ['1-开始-开始登录', '2-输入-输入账号和密码', '3-处理-提交登录请求', '4-判断-账号密码是否正确？', '  是-5', '  否-2', '5-处理-登录成功', '6-结束-流程结束'].join('\n')
+    },
+    usecase: {
+      name: '用例图',
+      rules: [
+        '顶格写角色，格式：角色：学生（也可以直接顶格写角色名）。',
+        '角色能做的用例，缩进 2 个空格写在角色下面。',
+        '被包含的用例，在用例名前加 <i> 并再缩进 2 个空格，表示上级用例包含它。',
+        '扩展出来的用例，在用例名前加 <e> 并再缩进 2 个空格。',
+        '一般 2~4 个角色，每个角色 3~6 个用例。'
+      ],
+      example: ['角色：学生', '  选课', '    <i>校验学分', '  查询成绩', '角色：教师', '  录入成绩', '  成绩统计'].join('\n')
+    },
+    architecture: {
+      name: '系统架构图',
+      rules: [
+        '顶格写层级名称，例如 用户层、应用层、数据层、横切关注点。',
+        '该层包含的模块缩进 2 个空格。',
+        '模块的补充说明缩进 4 个空格，多说明用 / 分隔（可选）。',
+        '名称里含「横切」或「公共」的层会画成虚线区域。',
+        '层级 3~5 个，每层 2~5 个模块。'
+      ],
+      example: ['用户层', '  学生端', '    选课 / 成绩查询', '  教师端', '    成绩录入 / 课程管理', '应用层', '  业务服务', '    选课服务 / 成绩服务', '数据层', '  数据库', '    MySQL / Redis', '横切关注点', '  认证 / 日志 / 监控'].join('\n')
+    },
+    sequence: {
+      name: '时序图',
+      rules: [
+        '第一行可选写：标题：登录时序图。',
+        '参与者要在消息之前先列出来，一行一个；写 参与者：前端页面，或直接写名字；写 角色 用户 会画成小人。',
+        '消息格式：发送方 -> 接收方：消息内容。',
+        '返回消息用双横线：接收方 --> 发送方：返回内容。',
+        '参与者名字前后必须完全一致，消息按时间顺序从上往下排。'
+      ],
+      example: ['标题：登录时序图', '角色 用户', '参与者：前端页面', '参与者：授权服务', '参与者：数据库', '用户 -> 前端页面：输入账号密码', '前端页面 -> 授权服务：提交登录请求', '授权服务 -> 数据库：校验用户信息', '数据库 --> 授权服务：返回用户数据', '授权服务 --> 前端页面：返回登录令牌', '前端页面 --> 用户：登录成功'].join('\n')
+    },
+    uml: {
+      name: 'UML 类图',
+      rules: [
+        '每个类写一行：类 学生（也可以写 抽象类、接口、枚举）。',
+        '类下面用 属性: 和 方法: 两个小节，成员每行一个，缩进 2 个空格。',
+        '属性写法：+学号: string；方法写法：+登录(账号: string, 密码: string): bool。+ 表示 public，- 表示 private。',
+        '关系写在最后，以 关系: 开头，格式：A "1" -- "*" B : 标签。',
+        '关系符号可用：-- 关联、--> 有向关联、..> 依赖、--|> 继承、..|> 实现、--o 聚合、--* 组合。',
+        '引号里写多重度，如 "1"、"0..1"、"*"。'
+      ],
+      example: ['类 学生', '属性:', '  +学号: string', '  +姓名: string', '方法:', '  +登录(账号: string, 密码: string): bool', '', '类 课程', '属性:', '  +课程ID: int', '  +课程名: string', '', '关系:', '学生 "1" -- "*" 课程 : 选修'].join('\n')
+    },
+    er: { name: '实体-联系图（ER 属性图）', lead: '我会给你一个业务场景，请设计 3~6 张表的数据库模型，工具会把表画成实体矩形、字段画成属性椭圆、外键画成联系菱形。', rules: SQL_RULES, example: SQL_EXAMPLE },
+    globalEr: { name: '全局 ER 图（表结构图）', lead: '我会给你一个业务场景，请设计 3~6 张表的数据库模型，工具会把每张表画成一个实体框、字段列在框内、外键用菱形连线并标注 1 / N。', rules: SQL_RULES, example: SQL_EXAMPLE },
+    table: { name: '数据库三线表', lead: '我会给你一个业务场景，请设计 2~4 张表的数据库模型，工具会把每张表排成一张三线表（字段名 / 类型 / 长度 / 主键 / 可空 / 默认值 / 说明）。', rules: SQL_RULES, example: SQL_EXAMPLE }
+  };
+
+  function buildAiPrompt(type){
+    const t = AI_TASK[type] || AI_TASK.module;
+    const lines = [
+      '你现在是我的「' + t.name + '」排版助手。' + (t.lead || '我会给你一段项目描述，请把它整理成可以直接粘贴到画图工具里的纯文本。'),
+      '',
+      '【输出要求】',
+      '1. 只输出纯文本，不要 Markdown 代码块标记，不要标题、不要解释、不要寒暄。',
+      '2. 严格按下面的格式规则书写，缩进只用空格，不要用 Tab。',
+      '3. 内容要贴合我的项目，中文命名，名称简短（建议 2~8 个字）。',
+      '',
+      '【格式规则】'
+    ];
+    t.rules.forEach((r, i) => lines.push((i + 1) + '. ' + r));
+    lines.push('', '【输出示例】', t.example, '', '【我的项目情况】',
+      '（把下面这段换成你的项目描述：题目、面向哪些角色、每个角色要做什么事、要保存哪些数据……）');
+    return lines.join('\n');
+  }
+
+  $('#btnAi').addEventListener('click', () => {
+    $('#aiTypeName').textContent = DIAGRAMS[state.type].label;
+    $('#aiPrompt').textContent = buildAiPrompt(state.type);
+    openOverlay('aiOverlay');
+  });
+
+  $('#btnCopyPrompt').addEventListener('click', async () => {
+    const text = $('#aiPrompt').textContent;
+    try{
+      await navigator.clipboard.writeText(text);
+      toast('提示词已复制');
+    }catch(e){
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      let ok = false;
+      try{ ok = document.execCommand('copy'); }catch(err){}
+      ta.remove();
+      toast(ok ? '提示词已复制' : '复制失败，请手动全选复制');
+    }
+  });
+
+  // 弹窗关闭
+  document.querySelectorAll('[data-close]').forEach(btn => {
+    btn.addEventListener('click', () => closeOverlay(btn.getAttribute('data-close')));
+  });
+  document.querySelectorAll('.overlay').forEach(ov => {
+    ov.addEventListener('click', (e) => { if (e.target === ov) ov.classList.remove('open'); });
+  });
+
+  // 样式输入
+  $('#inLevelGap').addEventListener('change', e => applyStyleChange('levelGap', Number(e.target.value)));
+  $('#inNodeGap').addEventListener('change', e => applyStyleChange('nodeGap', Number(e.target.value)));
+  $('#inFontSize').addEventListener('change', e => applyStyleChange('fontSize', Number(e.target.value)));
+  $('#inLineWidth').addEventListener('change', e => applyStyleChange('lineWidth', Number(e.target.value)));
+  $('#inFont').addEventListener('change', e => applyStyleChange('font', e.target.value));
+  $('#inArrow').addEventListener('change', e => applyStyleChange('arrow', e.target.value));
+  $('#inPk').addEventListener('change', e => applyStyleChange('pkUnderline', e.target.checked));
+  $('#inAttrs').addEventListener('change', e => applyStyleChange('showAttrs', e.target.checked));
+  $('#inCenter').addEventListener('change', e => applyStyleChange('center', e.target.checked));
+  $('#inRowGap').addEventListener('change', e => applyStyleChange('rowGap', Number(e.target.value)));
+  $('#inHeadBg').addEventListener('change', e => applyStyleChange('headBg', e.target.value));
+
+  document.querySelectorAll('[data-step]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const field = btn.getAttribute('data-step');
+      const delta = Number(btn.getAttribute('data-delta'));
+      const current = Number(state.style[field]);
+      applyStyleChange(field, current + delta);
+    });
+  });
+
+  $('#btnResetStyle').addEventListener('click', () => {
+    state.style = defaultStyle(state.type);
+    state.styles[state.type] = state.style;
+    syncStyleInputs();
+    render(false);
+    saveDraftNow();
+    toast('已恢复默认样式');
+  });
+
+  // 缩放
+  $('#btnZoomIn').addEventListener('click', () => {
+    const rect = viewport.getBoundingClientRect();
+    zoomAt(state.view.scale + 0.1, rect.left + rect.width / 2, rect.top + rect.height / 2);
+  });
+  $('#btnZoomOut').addEventListener('click', () => {
+    const rect = viewport.getBoundingClientRect();
+    zoomAt(state.view.scale - 0.1, rect.left + rect.width / 2, rect.top + rect.height / 2);
+  });
+  $('#btnFit').addEventListener('click', fitView);
+
+  // 快捷键
+  document.addEventListener('keydown', (e) => {
+    const inField = e.target && (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT');
+    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter'){
+      e.preventDefault();
+      generate();
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's'){
+      e.preventDefault();
+      saveProject();
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !inField){
+      e.preventDefault();
+      undoDrag();
+      return;
+    }
+    if (e.key === 'Escape'){
+      closeMenus();
+      $('#helpPopover').classList.remove('open');
+      document.querySelectorAll('.overlay.open').forEach(o => o.classList.remove('open'));
+    }
+  });
+
+  // 窗口尺寸变化时，如果内容超出视野则保持当前比例
+  window.addEventListener('resize', () => { applyView(); });
+
+  /* ================= 初始化 ================= */
+  // 深链：?type=flow&text=xxx（也可写在 # 后），供 Skill / iframe 调用
+  function applyDeepLink(){
+    const raw = (location.search || '').replace(/^\?/, '') + '&' + (location.hash || '').replace(/^#/, '');
+    const q = new URLSearchParams(raw);
+    const t = (q.get('type') || '').trim();
+    if (t && DIAGRAMS[t] && t !== state.type) switchType(t, true);
+    const txt = q.get('text');
+    if (txt && txt.trim()){
+      state.docs[state.type] = txt;
+      state.outline = txt;
+      outlineEl.value = txt;
+      state.positions = {};
+      state.poses[state.type] = state.positions;
+      state.projectId = null;
+      state.projectName = '';
+      undoStack.length = 0;
+      return true;
+    }
+    return false;
+  }
+
+  function init(){
+    buildTypeOptions();
+    const restored = loadDraft();
+    if (!restored){
+      state.type = 'module';
+      state.docs = { module: DEFAULT_OUTLINE };
+      state.styles = { module: defaultStyle('module') };
+      state.poses = { module: {} };
+      state.outline = DEFAULT_OUTLINE;
+      state.style = state.styles.module;
+      state.positions = state.poses.module;
+    }
+    outlineEl.value = state.outline;
+    switchType(state.type, true);
+    syncStyleInputs();
+    const deepLinked = applyDeepLink();
+    if (isBare()) document.body.classList.add('bare');
+    setMobileView(deepLinked ? 'preview' : 'edit');
+    requestAnimationFrame(() => {
+      const ok = render(true);
+      if (!ok) return;
+      if (!deepLinked){
+        saveDraftNow();
+        if (state.type === 'module' && state.dropped) toast('已忽略超出 4 级模块限制的 ' + state.dropped + ' 行');
+      }
+    });
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>

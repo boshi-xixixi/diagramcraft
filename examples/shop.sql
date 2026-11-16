@@ -1,0 +1,26 @@
+CREATE TABLE `sys_user` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '用户ID',
+  `username` VARCHAR(50) NOT NULL COMMENT '用户名',
+  `password` VARCHAR(100) NOT NULL COMMENT '密码',
+  `phone` VARCHAR(20) DEFAULT NULL COMMENT '手机号',
+  `role_id` BIGINT NOT NULL COMMENT '角色ID',
+  PRIMARY KEY (`id`),
+  CONSTRAINT `fk_user_role` FOREIGN KEY (`role_id`) REFERENCES `sys_role` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户表';
+
+CREATE TABLE `sys_role` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '角色ID',
+  `role_name` VARCHAR(50) NOT NULL COMMENT '角色名称',
+  `role_code` VARCHAR(50) NOT NULL COMMENT '角色编码',
+  PRIMARY KEY (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='角色表';
+
+CREATE TABLE `article` (
+  `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '文章ID',
+  `title` VARCHAR(120) NOT NULL COMMENT '标题',
+  `content` TEXT COMMENT '正文',
+  `author_id` BIGINT NOT NULL COMMENT '作者ID',
+  `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  CONSTRAINT `fk_article_user` FOREIGN KEY (`author_id`) REFERENCES `sys_user` (`id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='文章表';
